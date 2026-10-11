@@ -27,7 +27,9 @@ if (-not $DockerHubUser) {
 if (-not $DockerHubUser) { throw 'Give -DockerHubUser or set DOCKERHUB_USER in .env.' }
 $image = "$DockerHubUser/$Repository"
 
-docker build --platform linux/amd64 -t "${image}:$Tag" -t "${image}:latest" $root
+$sha = (git -C $root rev-parse --short=7 HEAD 2>$null)
+$builtAt = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+docker build --platform linux/amd64 --build-arg "GIT_SHA=$sha" --build-arg "BUILD_DATE=$builtAt" -t "${image}:$Tag" -t "${image}:latest" $root
 if ($LASTEXITCODE -ne 0) { throw 'docker build failed' }
 docker push "${image}:$Tag"
 if ($LASTEXITCODE -ne 0) { throw 'docker push failed (run `docker login` first)' }

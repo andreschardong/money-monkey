@@ -10,7 +10,7 @@ import { Api, problemMessage } from '../core/api';
 import { Auth, passkeyErrorMessage } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { ImportResult, Passkey } from '../core/models';
-import { PortfolioList } from '../core/stores';
+import { PortfolioList, VersionStore } from '../core/stores';
 import { confirm } from '../shared/confirm-dialog';
 
 @Component({
@@ -25,6 +25,7 @@ export class AccountPage {
   private readonly snack = inject(MatSnackBar);
   private readonly api = inject(Api);
   private readonly list = inject(PortfolioList);
+  protected readonly version = inject(VersionStore).value;
 
   protected readonly passkeys = signal<Passkey[] | null>(null);
   protected readonly name = signal('');

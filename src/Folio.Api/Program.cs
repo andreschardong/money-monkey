@@ -281,6 +281,7 @@ app.MapScalarApiReference(options => options.WithTitle("Money Monkey API")).Requ
 
 // Everything under /api needs a signed-in account except the sign-in endpoints themselves.
 var api = app.MapGroup("/api").RequireAuthorization();
+api.MapVersionEndpoints();
 api.MapAuthEndpoints();
 api.MapOverviewEndpoints();
 api.MapAssetEndpoints();

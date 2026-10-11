@@ -74,6 +74,9 @@
               <span>Install app</span>
             </button>
           }
+          @if (version(); as v) {
+            <a class="version" routerLink="/account" [attr.title]="v.commit ? 'Built from commit ' + v.commit : null">v{{ v.version }}</a>
+          }
         </div>
       </nav>
     </mat-sidenav>
