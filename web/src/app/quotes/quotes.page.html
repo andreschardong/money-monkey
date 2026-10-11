@@ -1,0 +1,135 @@
+<header class="header">
+  <h1>Quotes</h1>
+  <p class="lede">
+    Look up any stock, ETF or fund on the exchanges Money Monkey follows. Closes load on demand and keep updating with
+    the daily refresh.
+  </p>
+</header>
+
+<section class="panel search">
+  <app-security-picker label="Symbol or company" [(value)]="picked" />
+  @if (lookupError()) {
+    <p class="error" role="alert">{{ lookupError() }}</p>
+  }
+</section>
+
+@if (picked(); as p) {
+  @if (security(); as s) {
+    <section class="quote">
+      <div class="identity">
+        <h2><span class="ticker big">{{ s.symbol }}</span></h2>
+        <p class="name">{{ s.name }}</p>
+        <p class="meta">
+          @if (s.exchange) {
+            <span>{{ s.exchange }}</span>
+          }
+          <span class="currency-code">{{ s.currency }}</span>
+          <span class="muted">{{ s.priceSource === 'Manual' ? 'Priced manually' : s.assetType === 'Etf' ? 'ETF' : s.assetType }}</span>
+        </p>
+      </div>
+      <div class="last">
+        <span class="price">{{ s.lastPrice | price: s.currency }}</span>
+        <app-change [percent]="s.dayChangePercent" />
+        <span class="muted">Close on {{ s.lastPriceDate | day: 'weekday' }}</span>
+      </div>
+    </section>
+  }
+
+  <section class="panel" [class.refreshing]="loadingPrices()">
+    <app-price-chart
+      [points]="prices()"
+      [transactions]="noTrades"
+      [currency]="p.currency"
+      [range]="range()"
+      (rangeChange)="range.set($event)" />
+
+    @if (stats(); as st) {
+      <dl class="facts">
+        <div>
+          <dt>Change over the range</dt>
+          <dd><app-change [amount]="st.change" [percent]="st.changePercent" [currency]="p.currency" /></dd>
+        </div>
+        <div>
+          <dt>High</dt>
+          <dd class="num">{{ st.high.close | price: p.currency }} <span class="muted">{{ st.high.date | day: 'short' }}</span></dd>
+        </div>
+        <div>
+          <dt>Low</dt>
+          <dd class="num">{{ st.low.close | price: p.currency }} <span class="muted">{{ st.low.date | day: 'short' }}</span></dd>
+        </div>
+        <div>
+          <dt>From</dt>
+          <dd class="num">{{ st.first.close | price: p.currency }} <span class="muted">{{ st.first.date | day: 'short' }}</span></dd>
+        </div>
+        <div>
+          <dt>Closes</dt>
+          <dd class="num">{{ st.days }}</dd>
+        </div>
+      </dl>
+    }
+  </section>
+
+  <div class="split">
+    <section class="panel">
+      <h3>Recent closes</h3>
+      @if (recent().length === 0) {
+        <p class="muted empty">No closes loaded yet.</p>
+      } @else {
+        <table class="data">
+          <thead>
+            <tr>
+              <th appSort="date" [sort]="closeSort" defaultDirection="desc">Date</th>
+              <th class="right" appSort="close" [sort]="closeSort" defaultDirection="desc">Close</th>
+              <th class="right" appSort="change" [sort]="closeSort" defaultDirection="desc">Change</th>
+              <th class="right" appSort="changePercent" [sort]="closeSort" defaultDirection="desc">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of recent(); track r.date) {
+              <tr>
+                <td class="num">{{ r.date | day }}</td>
+                <td class="right num">{{ r.close | price: p.currency }}</td>
+                <td class="right"><app-change [amount]="r.change" [currency]="p.currency" [showArrow]="false" /></td>
+                <td class="right"><app-change [percent]="r.changePercent" [showArrow]="false" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+
+    <section class="panel">
+      <h3>Dividends and splits</h3>
+      @if (sortedActions().length === 0) {
+        <p class="muted empty">None on record for the history loaded so far. Choose a longer range to load more.</p>
+      } @else {
+        <table class="data">
+          <thead>
+            <tr>
+              <th appSort="date" [sort]="actionSort" defaultDirection="desc">Date</th>
+              <th appSort="kind" [sort]="actionSort">Event</th>
+              <th class="right" appSort="amount" [sort]="actionSort" defaultDirection="desc">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of sortedActions(); track a.date + a.kind) {
+              <tr>
+                <td class="num">{{ a.date | day }}</td>
+                <td>{{ a.kind === 'Split' ? 'Split' : 'Dividend' }}</td>
+                <td class="right num">
+                  @if (a.kind === 'Split') {
+                    {{ splitLabel(a) }}
+                  } @else {
+                    {{ a.amount | price: p.currency }} <span class="muted">a share</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </section>
+  </div>
+} @else if (!lookupError()) {
+  <p class="hint muted">Search for a symbol to see its quote and history, e.g. SHOP.TO, AAPL or SAP.DE.</p>
+}

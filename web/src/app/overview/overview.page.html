@@ -1,0 +1,163 @@
+@if (empty()) {
+  <section class="welcome">
+    <h1>Start with a portfolio</h1>
+    <p>
+      Create one for each account you hold, such as a TFSA, an RRSP or a US margin account. A portfolio reports
+      in CAD, USD or EUR and can hold cash and stocks in any currency.
+    </p>
+    <button mat-flat-button (click)="createPortfolio()">
+      <mat-icon svgIcon="add" />
+      Create portfolio
+    </button>
+  </section>
+} @else if (failed()) {
+  <section class="welcome">
+    <h1>The overview did not load</h1>
+    <p>Money Monkey could not reach its server. Check that the API is running, then try again.</p>
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </section>
+} @else if (overview(); as o) {
+  <section class="hero" [class.refreshing]="loadingOverview()">
+    <h1 class="title">Net worth</h1>
+    <div class="figure-row">
+      <app-hero-figure [value]="o.totalValue" [currency]="o.currency" />
+      <mat-button-toggle-group
+        class="currency-switch"
+        [value]="display.value()"
+        (change)="display.set($event.value)"
+        hideSingleSelectionIndicator
+        aria-label="Show totals in">
+        @for (c of currencies; track c) {
+          <mat-button-toggle [value]="c">{{ c }}</mat-button-toggle>
+        }
+      </mat-button-toggle-group>
+    </div>
+
+    <dl class="facts">
+      <div>
+        <dt>Today</dt>
+        <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
+      </div>
+      <div>
+        <dt>Total return</dt>
+        <dd>
+          @if (o.totalReturn !== null) {
+            <app-change [amount]="o.totalReturn" [percent]="o.totalReturnPercent" [currency]="o.currency" />
+          } @else {
+            <span class="muted">Record deposits to track</span>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Net deposits</dt>
+        <dd class="num">{{ o.netContributions | money: o.currency }}</dd>
+      </div>
+      <div>
+        <dt>Prices from</dt>
+        <dd>{{ o.pricesAsOf | day: 'weekday' }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  @for (warning of o.warnings; track warning) {
+    <p class="notice" role="status"><mat-icon svgIcon="warning" />{{ warning }}</p>
+  }
+
+  <section class="panel chart-panel">
+    <app-value-chart
+      [points]="history()?.points ?? []"
+      [currency]="o.currency"
+      [range]="range()"
+      [loading]="loadingHistory()"
+      (rangeChange)="range.set($event)" />
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Portfolios</h2>
+      <a routerLink="/assets" class="panel-link">All assets</a>
+    </div>
+    <table class="data">
+      <thead>
+        <tr>
+          <th appSort="name" [sort]="portfolioSort">Portfolio</th>
+          <th class="right" appSort="value" [sort]="portfolioSort" defaultDirection="desc">Value</th>
+          <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">Today</th>
+          <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of sortedPortfolios(); track p.id) {
+          <tr class="clickable" (click)="open(p.id)">
+            <td>
+              <a class="row-link" [routerLink]="['/portfolios', p.id]" (click)="$event.stopPropagation()">{{ p.name }}</a>
+              <span class="currency-code">{{ p.baseCurrency }}</span>
+              <div class="muted small">
+                {{ p.holdingsCount }} {{ p.holdingsCount === 1 ? 'holding' : 'holdings' }}
+                @if (p.access !== 'Owner') {
+                  · shared by {{ p.ownerEmail }}
+                }
+              </div>
+            </td>
+            <td class="right num">
+              {{ p.valueInDisplay | money: o.currency }}
+              @if (p.baseCurrency !== o.currency) {
+                <div class="muted small">{{ p.value | money: p.baseCurrency }}</div>
+              }
+            </td>
+            <td class="right hide-s"><app-change [amount]="p.dayChangeInDisplay" [currency]="o.currency" [showArrow]="false" /></td>
+            <td class="right">
+              @if (p.totalReturnInDisplay !== null) {
+                <app-change [amount]="p.totalReturnInDisplay" [currency]="o.currency" [showArrow]="false" />
+                <div class="small"><app-change [percent]="p.totalReturnPercent" [showArrow]="false" /></div>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <div class="split">
+    <section class="panel">
+      <h2>By currency</h2>
+      <p class="caption">Where your money is exposed, cash included.</p>
+      @if (o.byCurrency.length) {
+        <app-allocation-bar [items]="o.byCurrency" [currency]="o.currency" colourBy="currency" />
+      } @else {
+        <p class="muted">Nothing invested yet.</p>
+      }
+    </section>
+
+    <section class="panel">
+      <h2>By type</h2>
+      <p class="caption">Stocks, funds and cash across all portfolios.</p>
+      @if (o.byAssetType.length) {
+        <app-allocation-bar [items]="o.byAssetType" [currency]="o.currency" colourBy="assetType" />
+      } @else {
+        <p class="muted">Nothing invested yet.</p>
+      }
+    </section>
+  </div>
+
+  @if (o.movers.length) {
+    <section class="panel">
+      <h2>Biggest moves</h2>
+      <p class="caption">Last close against the one before, for everything you hold.</p>
+      <ul class="movers">
+        @for (m of o.movers; track m.securityId) {
+          <li>
+            <span class="ticker">{{ m.symbol }}</span>
+            <span class="name secondary">{{ m.name }}</span>
+            <span class="num price">{{ m.price | price: m.currency }}</span>
+            <app-change [percent]="m.dayChangePercent" />
+          </li>
+        }
+      </ul>
+    </section>
+  }
+} @else {
+  <div class="loading muted" aria-live="polite">Loading your portfolios…</div>
+}

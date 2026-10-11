@@ -1,0 +1,168 @@
+:host {
+  display: grid;
+  // Lets wide tables scroll inside their panel instead of widening the page.
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 24px;
+}
+
+.lede {
+  max-width: 64ch;
+  margin-top: 6px;
+  color: var(--ink-2);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin: 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  dt {
+    color: var(--ink-3);
+    font-size: 0.8125rem;
+  }
+
+  dd {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-3);
+
+  &.Succeeded {
+    background: var(--gain);
+  }
+
+  &.PartiallySucceeded,
+  &.Running {
+    background: var(--brass);
+  }
+
+  &.Failed {
+    background: var(--loss);
+  }
+}
+
+.log {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+
+  summary {
+    width: fit-content;
+    cursor: pointer;
+  }
+
+  pre {
+    max-height: 240px;
+    margin: 8px 0 0;
+    padding: 12px 14px;
+    overflow: auto;
+    border-radius: var(--radius-m);
+    background: var(--wash);
+    font-size: 0.8125rem;
+    white-space: pre-wrap;
+  }
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 20px;
+}
+
+.panel {
+  padding: 18px 22px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+  background: var(--card);
+}
+
+.caption {
+  margin: 4px 0 12px;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.name {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-link {
+  color: var(--ink);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.unused td {
+  color: var(--ink-3);
+}
+
+.problem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warn-ink);
+
+  mat-icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.empty {
+  padding: 12px 0;
+}
+
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hide-s {
+    display: none;
+  }
+}

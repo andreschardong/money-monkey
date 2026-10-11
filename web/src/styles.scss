@@ -1,0 +1,360 @@
+@use '@angular/material' as mat;
+
+// ---------------------------------------------------------------------------
+// Tokens. "Ink and loonie": ink-blue text on cool paper, harbour blue for action
+// and the value series, loonie brass for deposits and selection. Chart slots are
+// validated (OKLCH band, chroma, CVD) for both surfaces; keep them in sync with
+// src/app/shared/chart-theme.ts.
+// ---------------------------------------------------------------------------
+:root {
+  color-scheme: light;
+  --paper: #f2f4f5;
+  --card: #ffffff;
+  --card-raised: #ffffff;
+  --ink: #172430;
+  --ink-2: #4e5c68;
+  --ink-3: #687582;
+  --rule: #dce2e6;
+  --rule-strong: #c3ccd3;
+  --wash: #eef2f4;
+  --harbour: #1b5f9c;
+  --harbour-ink: #174f82;
+  --harbour-wash: #e5eef7;
+  --on-harbour: #ffffff;
+  --brass: #b07a1f;
+  --brass-ink: #855a10;
+  --brass-wash: #f7efdf;
+  --gain: #137a4b;
+  --gain-wash: #e3f2ea;
+  --loss: #b3261e;
+  --loss-wash: #fbe9e7;
+  --warn-ink: #7a5300;
+  --warn-wash: #fdf3d8;
+  --chart-1: #1c6bb0;
+  --chart-2: #b07a1f;
+  --chart-3: #7a5bd6;
+  --chart-4: #d55181;
+  --chart-other: #98a3ac;
+  --grid: #e7ebee;
+  --shadow: 0 1px 2px rgb(23 36 48 / 6%), 0 4px 16px rgb(23 36 48 / 5%);
+
+  --font: 'Archivo Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+  --rail: 256px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #0e1519;
+  --card: #162027;
+  --card-raised: #1b2730;
+  --ink: #e4eaee;
+  --ink-2: #a9b6c0;
+  --ink-3: #8795a0;
+  --rule: #26333c;
+  --rule-strong: #35444f;
+  --wash: #1c2831;
+  --harbour: #6aa8e0;
+  --harbour-ink: #8dbde9;
+  --harbour-wash: #1a2d3d;
+  --on-harbour: #0b1a26;
+  --brass: #bf8a2c;
+  --brass-ink: #d9a441;
+  --brass-wash: #2b2416;
+  --gain: #4cc38a;
+  --gain-wash: #12291f;
+  --loss: #f28b82;
+  --loss-wash: #2f1a19;
+  --warn-ink: #e8c172;
+  --warn-wash: #2c2412;
+  --chart-1: #4c93d6;
+  --chart-2: #bf8a2c;
+  --chart-3: #9085e9;
+  --chart-4: #d55181;
+  --chart-other: #5d6b75;
+  --grid: #22303a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+}
+
+// Material picks up the same palette through its system tokens.
+html {
+  @include mat.theme((
+    color: (primary: mat.$azure-palette, tertiary: mat.$orange-palette, theme-type: color-scheme),
+    typography: (plain-family: 'Archivo Variable', brand-family: 'Archivo Variable'),
+    density: -1,
+  ), $overrides: (
+    primary: var(--harbour),
+    on-primary: var(--on-harbour),
+    primary-container: var(--harbour-wash),
+    on-primary-container: var(--harbour-ink),
+    secondary-container: var(--harbour-wash),
+    on-secondary-container: var(--harbour-ink),
+    surface: var(--card),
+    on-surface: var(--ink),
+    on-surface-variant: var(--ink-2),
+    surface-container-lowest: var(--card),
+    surface-container-low: var(--card),
+    surface-container: var(--card-raised),
+    surface-container-high: var(--card-raised),
+    surface-container-highest: var(--wash),
+    background: var(--paper),
+    on-background: var(--ink),
+    outline: var(--rule-strong),
+    outline-variant: var(--rule),
+    error: var(--loss),
+  ));
+
+  @include mat.dialog-overrides((
+    container-shape: var(--radius-l),
+  ));
+  @include mat.snack-bar-overrides((
+    container-color: var(--ink),
+    supporting-text-color: var(--paper),
+    button-color: var(--brass),
+  ));
+}
+
+// ---------------------------------------------------------------------------
+// Base
+// ---------------------------------------------------------------------------
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  font-stretch: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.125rem;
+}
+
+h3 {
+  font-size: 1rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--harbour-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+// Numbers that line up in columns get tabular figures; large standalone figures stay proportional.
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gain {
+  color: var(--gain);
+}
+
+.loss {
+  color: var(--loss);
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.secondary {
+  color: var(--ink-2);
+}
+
+// Tickers are condensed and bold, the way they read on a quote board.
+.ticker {
+  font-stretch: 78%;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.currency-code {
+  display: inline-block;
+  padding: 0 6px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 4px;
+  color: var(--ink-2);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-stretch: 90%;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+
+.surface {
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// Data tables share one quiet style: hairlines between rows, numbers right-aligned.
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink-3);
+    font-size: 0.75rem;
+    font-weight: 550;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .right {
+    text-align: right;
+  }
+
+  tr.clickable {
+    cursor: pointer;
+
+    &:hover td {
+      background: var(--wash);
+    }
+  }
+
+  tfoot td {
+    border-top: 1px solid var(--rule-strong);
+    border-bottom: 0;
+    font-weight: 600;
+  }
+}
+
+// Sortable column headers: click (or Enter / Space) to sort, again to flip. The arrow keeps its space when idle.
+table.data th.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &::after {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 6px;
+    vertical-align: 1px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  &:hover,
+  &:focus-visible,
+  &.sorted {
+    color: var(--ink);
+  }
+
+  &.sorted::after {
+    border-bottom-color: var(--brass);
+  }
+
+  &.sorted.desc::after {
+    border-bottom: 0;
+    border-top: 5px solid var(--brass);
+  }
+}
+
+// Form fields in dialogs fill their grid cell.
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-dialog-container .mdc-dialog__title {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+// Phones: columns marked hide-s give way under 600px (hide-m under 960px), dates never wrap, and dialogs may
+// use the whole width. Components keep their own, narrower rules where they have them.
+table.data td.date,
+table.data th.date {
+  white-space: nowrap;
+}
+
+@media (max-width: 599px) {
+  .hide-s {
+    display: none !important;
+  }
+
+  // Slightly tighter cells on phones, so four columns fit without a sideways scroll.
+  table.data th,
+  table.data td {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .cdk-overlay-pane.mat-mdc-dialog-panel {
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+@media (max-width: 959px) {
+  .hide-m {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,126 @@
+mat-dialog-content {
+  display: grid;
+  gap: 16px;
+  width: min(640px, 86vw);
+  max-width: 100%;
+  max-height: 72vh;
+}
+
+.types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    border-color: var(--ink-3);
+    color: var(--ink);
+  }
+
+  &.selected {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.rate {
+  grid-column: span 2;
+}
+
+.held,
+.hint-line {
+  margin-top: -6px;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+
+.link {
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--harbour-ink);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m);
+  background: var(--wash);
+
+  strong {
+    font-size: 1.125rem;
+    font-weight: 650;
+  }
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m);
+  background: var(--loss-wash);
+  color: var(--loss);
+  font-size: 0.875rem;
+
+  mat-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rate {
+    grid-column: 1 / -1;
+  }
+}
+
+// A phone: every field on its own line, so a suffix such as the currency never sits on the label.
+@media (max-width: 480px) {
+  mat-dialog-content {
+    width: auto;
+    max-height: 78vh;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
