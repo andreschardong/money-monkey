@@ -103,3 +103,17 @@
     <p class="error" role="alert">{{ importError() }}</p>
   }
 </section>
+
+<section class="panel">
+  <h2>About</h2>
+  @if (version(); as v) {
+    <p class="caption">
+      Money Monkey version <strong>{{ v.version }}</strong>@if (v.commit) {, commit <code>{{ v.commit }}</code>}@if (v.builtAt) {, built {{ v.builtAt | when }}}
+    </p>
+    <p class="caption">
+      Source and licence: <a href="https://github.com/andreschardong/money-monkey" target="_blank" rel="noopener">github.com/andreschardong/money-monkey</a>
+    </p>
+  } @else {
+    <p class="muted">Loading…</p>
+  }
+</section>

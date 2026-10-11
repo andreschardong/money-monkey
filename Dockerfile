@@ -16,7 +16,9 @@ COPY src/Folio.Core/Folio.Core.csproj src/Folio.Core/
 COPY src/Folio.Api/Folio.Api.csproj src/Folio.Api/
 RUN dotnet restore src/Folio.Api/Folio.Api.csproj
 COPY src/ src/
-RUN dotnet publish src/Folio.Api/Folio.Api.csproj -c Release -o /app --no-restore
+# The commit and build time end up in the version the app reports (GET /api/version).
+ARG GIT_SHA=
+RUN dotnet publish src/Folio.Api/Folio.Api.csproj -c Release -o /app --no-restore -p:SourceRevisionId=$GIT_SHA
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 # The PostgreSQL driver probes for Kerberos at start-up; without this library it logs a harmless error.
@@ -26,6 +28,8 @@ COPY --from=api /app ./
 COPY --from=web /web/dist/folio-web/browser ./wwwroot
 # Daily log files go here (bind-mounted by docker compose; ephemeral on a cloud host).
 RUN mkdir -p /app/logs && chown $APP_UID /app/logs
+ARG BUILD_DATE=
+ENV App__BuiltAt=$BUILD_DATE
 ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 USER $APP_UID

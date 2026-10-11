@@ -1,7 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Auth } from './auth';
-import { Currency, MarketStatus, PORTFOLIO_CURRENCIES, PortfolioSummary } from './models';
+import { Currency, MarketStatus, PORTFOLIO_CURRENCIES, PortfolioSummary, Version } from './models';
 
 /** The portfolio list shown in the navigation rail; reloaded after any change to a portfolio. */
 @Injectable({ providedIn: 'root' })
@@ -38,6 +38,13 @@ export class MarketStatusStore {
 const DISPLAY_KEY = 'folio.displayCurrency';
 
 /** The currency the overview totals are shown in. */
+/** The running build's version, for the nav footer and the Account page. Anonymous, so it loads once for everyone. */
+@Injectable({ providedIn: 'root' })
+export class VersionStore {
+  readonly resource = httpResource<Version>(() => '/api/version');
+  readonly value = computed(() => (this.resource.hasValue() ? this.resource.value() : null));
+}
+
 @Injectable({ providedIn: 'root' })
 export class DisplayCurrency {
   readonly value = signal<Currency>(readDisplayCurrency());
