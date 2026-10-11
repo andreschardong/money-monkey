@@ -1,0 +1,59 @@
+name: folio
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: folio
+      POSTGRES_USER: folio
+      POSTGRES_PASSWORD: folio
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - folio-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U folio -d folio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # Catches the activation and sign-in emails on this PC. Inbox: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.31
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+    restart: unless-stopped
+
+  app:
+    build: .
+    environment:
+      ConnectionStrings__Folio: "Host=db;Port=5432;Database=folio;Username=folio;Password=folio"
+      MarketData__AlphaVantageApiKey: "${ALPHAVANTAGE_API_KEY:-}"
+      Auth__PublicUrl: "${FOLIO_PUBLIC_URL:-http://localhost:8090}"
+      Auth__PasskeyDomain: "${FOLIO_PASSKEY_DOMAIN:-localhost}"
+      Auth__InboxUrl: "${FOLIO_INBOX_URL:-http://localhost:8025}"
+      Auth__AllowedEmails: "${FOLIO_ALLOWED_EMAILS:-}"
+      Auth__BehindProxy: "${FOLIO_BEHIND_PROXY:-false}"
+      Email__Host: "${SMTP_HOST:-mailpit}"
+      Email__Port: "${SMTP_PORT:-1025}"
+      Email__Security: "${SMTP_SECURITY:-None}"
+      Email__User: "${SMTP_USER:-}"
+      Email__Password: "${SMTP_PASSWORD:-}"
+      Email__From: "${SMTP_FROM:-Money Monkey <folio@localhost>}"
+      TZ: America/Toronto
+    ports:
+      # Bound to this PC only.
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  folio-db:

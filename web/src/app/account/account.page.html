@@ -1,0 +1,105 @@
+<header class="header">
+  <div>
+    <h1>Account</h1>
+    <p class="lede">Signed in as <strong>{{ auth.email() }}</strong></p>
+  </div>
+  <div class="actions">
+    <button mat-button (click)="signOutEverywhere()">Sign out everywhere</button>
+    <button mat-stroked-button (click)="signOut()">
+      <mat-icon svgIcon="logout" />
+      Sign out
+    </button>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>Passkeys</h2>
+  <p class="caption">
+    A passkey signs you in with Windows Hello, Touch ID, Face ID or your password manager. Add one on each device
+    you use. If you lose them all, the sign-in page can still email you a link.
+  </p>
+
+  @if (passkeys(); as list) {
+    @if (list.length === 0) {
+      <p class="muted empty">No passkeys yet. You're signing in by email link.</p>
+    } @else {
+      <ul class="list">
+        @for (p of list; track p.id) {
+          <li>
+            <mat-icon svgIcon="key" aria-hidden="true" />
+            <div class="text">
+              <span class="name">{{ p.name }}</span>
+              <span class="meta muted">Added {{ p.createdAt | when }}{{ p.backedUp ? ', synced by its provider' : ', this device only' }}</span>
+            </div>
+            <button mat-button (click)="remove(p)">Remove</button>
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <p class="muted empty">Loading…</p>
+  }
+
+  @if (auth.passkeysSupported) {
+    <form class="add" (ngSubmit)="addPasskey()" novalidate>
+      <mat-form-field>
+        <mat-label>Name for the new passkey (optional)</mat-label>
+        <input matInput [ngModel]="name()" (ngModelChange)="name.set($event)" name="name" maxlength="60" placeholder="Work laptop">
+      </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="busy()">
+        <mat-icon svgIcon="fingerprint" />
+        Add a passkey
+      </button>
+    </form>
+  } @else {
+    <p class="muted">This browser can't create passkeys here. Passkeys need https, or localhost.</p>
+  }
+
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+</section>
+
+<section class="panel">
+  <h2>Export my data</h2>
+  <p class="caption">
+    Everything you entered, for a spreadsheet or for safekeeping. The holdings file is today's valuation of each
+    portfolio; the JSON file is the complete record.
+  </p>
+  <div class="downloads">
+    <a mat-stroked-button href="/api/export/transactions.csv" download>Transactions (CSV)</a>
+    <a mat-stroked-button href="/api/export/cash.csv" download>Cash balances (CSV)</a>
+    <a mat-stroked-button href="/api/export/holdings.csv" download>Holdings today (CSV)</a>
+    <a mat-stroked-button href="/api/export" download="folio-export.json">Everything (JSON)</a>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Import</h2>
+  <p class="caption">
+    Load a Money Monkey export, the "Everything (JSON)" file, into this account. Each portfolio in the file is added as a
+    new portfolio; nothing you already have is changed. Stocks are looked up again, so a large file takes a moment.
+  </p>
+  <input #file type="file" accept="application/json,.json" hidden (change)="importFile(file)">
+  <div class="downloads">
+    <button mat-stroked-button type="button" (click)="file.click()" [disabled]="importing()">
+      <mat-icon svgIcon="upload_file" />
+      {{ importing() ? 'Importing…' : 'Import a JSON file' }}
+    </button>
+  </div>
+  @if (importResult(); as r) {
+    <div class="result" role="status">
+      <p>
+        Added {{ r.portfolios }} {{ r.portfolios === 1 ? 'portfolio' : 'portfolios' }} with {{ r.transactions }}
+        {{ r.transactions === 1 ? 'transaction' : 'transactions' }} and {{ r.cashBalances }} cash
+        {{ r.cashBalances === 1 ? 'balance' : 'balances' }}.
+      </p>
+      @for (w of r.warnings; track w) {
+        <p class="muted">{{ w }}</p>
+      }
+    </div>
+  }
+  @if (importError()) {
+    <p class="error" role="alert">{{ importError() }}</p>
+  }
+</section>

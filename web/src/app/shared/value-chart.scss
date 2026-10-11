@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 12px;
+}
+
+.legend {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.key {
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--key);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+mat-button-toggle-group {
+  --mat-button-toggle-height: 32px;
+  --mat-button-toggle-shape: 8px;
+  --mat-button-toggle-label-text-size: 0.8125rem;
+  --mat-button-toggle-selected-state-background-color: var(--harbour-wash);
+  --mat-button-toggle-selected-state-text-color: var(--harbour-ink);
+  border-color: var(--rule);
+}
+
+.view-switch {
+  --mat-button-text-label-text-size: 0.8125rem;
+  min-width: 0;
+}
+
+.plot {
+  height: 300px;
+  transition: opacity 120ms ease;
+
+  &.refreshing {
+    opacity: 0.55;
+  }
+}
+
+.table-scroll {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.empty {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .plot {
+    height: 240px;
+  }
+}

@@ -1,0 +1,141 @@
+<header class="header">
+  <div>
+    <h1>Prices and rates</h1>
+    <p class="lede">
+      Quotes come from Yahoo Finance and exchange rates from the Bank of Canada, once each weekday after the
+      markets close. A refresh missed while this computer was off runs as soon as Money Monkey starts.
+    </p>
+  </div>
+  <button mat-flat-button (click)="refresh()" [disabled]="running()">
+    <mat-icon svgIcon="sync" [class.spin]="running()" />
+    {{ running() ? 'Refreshing…' : 'Refresh now' }}
+  </button>
+</header>
+
+@if (status(); as s) {
+  <dl class="status">
+    <div>
+      <dt>Last refresh</dt>
+      <dd>
+        <span class="dot" [class]="s.lastRun?.status ?? 'none'"></span>
+        {{ statusText() }}
+        @if (s.lastRun) {
+          <span class="muted">{{ s.lastRun.finishedAt ?? s.lastRun.startedAt | when }}</span>
+        }
+      </dd>
+    </div>
+    <div>
+      <dt>Next scheduled</dt>
+      <dd>{{ s.schedulerEnabled ? (s.nextScheduledRun | when) : 'Scheduler off' }}</dd>
+    </div>
+    <div>
+      <dt>Latest close</dt>
+      <dd>{{ s.pricesAsOf | day: 'weekday' }}</dd>
+    </div>
+    <div>
+      <dt>Latest exchange rate</dt>
+      <dd>{{ s.fxAsOf | day: 'weekday' }}</dd>
+    </div>
+    <div>
+      <dt>Backup source</dt>
+      <dd>{{ s.fallbackConfigured ? 'Alpha Vantage key set' : 'None' }}</dd>
+    </div>
+  </dl>
+
+  @if (s.lastRun?.log; as log) {
+    <details class="log">
+      <summary>What the last refresh did</summary>
+      <pre>{{ log }}</pre>
+    </details>
+  }
+}
+
+<div class="split">
+  <section class="panel">
+    <h2>Exchange rates</h2>
+    <p class="caption">
+      @if (fx()?.ratesDate; as d) {
+        Published {{ d | day: 'weekday' }}. Purchases use the rate of their own trade date.
+      }
+    </p>
+    <table class="data">
+      <thead>
+        <tr>
+          <th appSort="pair" [sort]="rateSort">Pair</th>
+          <th class="right" appSort="rate" [sort]="rateSort" defaultDirection="desc">Rate</th>
+          <th>Inverse</th>
+          <th class="right">Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of sortedRates(); track r.pair) {
+          <tr>
+            <td>{{ r.pair }}</td>
+            <td class="right num strong">{{ r.rate }}</td>
+            <td class="muted">{{ r.inverse }}</td>
+            <td class="right num muted">{{ r.inverseRate }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Without a quote?</h2>
+    <p class="caption">
+      GICs, private funds and some mutual funds have no market quote. Add them with a price you update yourself.
+    </p>
+    <button mat-stroked-button (click)="addManual()">
+      <mat-icon svgIcon="add" />
+      Add manually priced security
+    </button>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>Securities</h2>
+  @if (securities().length === 0) {
+    <p class="muted empty">Securities appear here once you trade them.</p>
+  } @else {
+    <div class="scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th appSort="symbol" [sort]="securitySort">Symbol</th>
+            <th class="hide-s" appSort="name" [sort]="securitySort">Name</th>
+            <th class="hide-s" appSort="exchange" [sort]="securitySort">Exchange</th>
+            <th class="right" appSort="lastPrice" [sort]="securitySort" defaultDirection="desc">Last close</th>
+            <th class="right" appSort="change" [sort]="securitySort" defaultDirection="desc">Change</th>
+            <th class="date hide-s" appSort="date" [sort]="securitySort" defaultDirection="desc">Date</th>
+            <th class="hide-s" appSort="source" [sort]="securitySort">Source</th>
+            <th><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of sortedSecurities(); track s.id) {
+            <tr [class.unused]="!s.inUse">
+              <td><a class="ticker quote-link" [routerLink]="['/quotes']" [queryParams]="{ symbol: s.symbol }">{{ s.symbol }}</a></td>
+              <td class="hide-s name">{{ s.name }}</td>
+              <td class="hide-s muted">{{ s.exchange ?? '—' }}</td>
+              <td class="right num">{{ s.lastPrice | price: s.currency }}</td>
+              <td class="right"><app-change [percent]="s.dayChangePercent" [showArrow]="false" /></td>
+              <td class="num date hide-s">{{ s.lastPriceDate | day: 'short' }}</td>
+              <td class="hide-s">
+                @if (s.lastRefreshError) {
+                  <span class="problem" [matTooltip]="s.lastRefreshError"><mat-icon svgIcon="warning" />Failed</span>
+                } @else {
+                  {{ s.priceSource === 'Manual' ? 'Manual' : 'Yahoo' }}
+                }
+              </td>
+              <td class="right">
+                @if (s.priceSource === 'Manual') {
+                  <button mat-button (click)="updatePrice(s)">Update price</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

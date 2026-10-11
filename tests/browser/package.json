@@ -1,0 +1,21 @@
+{
+  "name": "folio-browser-checks",
+  "version": "1.0.0",
+  "description": "End-to-end checks against a running Folio (node <script> <baseUrl> <mailpitUrl>)",
+  "scripts": {
+    "account": "node passkeys.mjs http://localhost:8090 http://localhost:8025",
+    "trading": "node flow.mjs http://localhost:8090 http://localhost:8025",
+    "suggestions": "node flow2.mjs http://localhost:8090 http://localhost:8025",
+    "screens": "node shoot.mjs http://localhost:8090 . http://localhost:8025",
+    "sharing": "node sharing.mjs http://localhost:8090 http://localhost:8025",
+    "mobile": "node mobile.mjs http://localhost:8090 shots http://localhost:8025",
+    "pwa": "node pwa-check.mjs http://localhost:8090 http://localhost:8025",
+    "icons": "node make-icons.mjs",
+    "live": "node live-check.mjs https://moneymonkey.example.com shots"
+  },
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.64.0"
+  },
+  "private": true
+}

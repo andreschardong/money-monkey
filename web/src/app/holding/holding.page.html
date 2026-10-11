@@ -1,0 +1,102 @@
+<a class="back" [routerLink]="['/portfolios', id()]">
+  <mat-icon svgIcon="arrow_back" aria-hidden="true" />
+  {{ portfolioName() }}
+</a>
+
+@if (notFound()) {
+  <section class="state">
+    <h1>This holding is not in the portfolio</h1>
+    <p>It may have been removed with its transactions.</p>
+  </section>
+} @else if (failed()) {
+  <section class="state">
+    <h1>The holding did not load</h1>
+    <p>Money Monkey could not reach its server. Check that it is running, then try again.</p>
+    <button mat-stroked-button (click)="retry()">Try again</button>
+  </section>
+} @else if (detail(); as d) {
+  <header class="header">
+    <div class="identity">
+      <h1><span class="ticker big">{{ d.security.symbol }}</span></h1>
+      <p class="name">{{ d.security.name }}</p>
+      <p class="meta">
+        @if (d.security.exchange) {
+          <span>{{ d.security.exchange }}</span>
+        }
+        <span class="currency-code">{{ d.security.currency }}</span>
+        @if (d.security.priceSource === 'Manual') {
+          <span class="muted">Priced manually</span>
+        }
+        <a [routerLink]="['/quotes']" [queryParams]="{ symbol: d.security.symbol }">Quote and history</a>
+      </p>
+    </div>
+    <button mat-flat-button (click)="add()">
+      <mat-icon svgIcon="add" />
+      Add transaction
+    </button>
+  </header>
+
+  <section class="quote">
+    <span class="price">{{ d.security.lastPrice | price: d.security.currency }}</span>
+    <app-change [percent]="d.security.dayChangePercent" />
+    <span class="muted">Close on {{ d.security.lastPriceDate | day: 'weekday' }}</span>
+  </section>
+
+  <section class="panel">
+    <app-price-chart
+      [points]="prices()"
+      [transactions]="d.transactions"
+      [currency]="d.security.currency"
+      [range]="range()"
+      (rangeChange)="range.set($event)" />
+  </section>
+
+  <dl class="stats">
+    @if (d.holding; as h) {
+      <div>
+        <dt>Shares</dt>
+        <dd class="num">{{ h.quantity | qty }}</dd>
+      </div>
+      <div>
+        <dt>Average cost</dt>
+        <dd class="num">{{ h.averageCost | price: h.currency }}</dd>
+      </div>
+      <div>
+        <dt>Book value</dt>
+        <dd class="num">{{ h.costBasis | money: d.baseCurrency }}</dd>
+      </div>
+      <div>
+        <dt>Market value</dt>
+        <dd class="num">{{ h.marketValue | money: d.baseCurrency }}</dd>
+      </div>
+      <div>
+        <dt>Unrealized gain</dt>
+        <dd><app-change [amount]="h.unrealizedGain" [percent]="h.unrealizedGainPercent" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
+      </div>
+      <div>
+        <dt>Share of portfolio</dt>
+        <dd class="num">{{ h.weight | pct: false : 1 }}</dd>
+      </div>
+    } @else {
+      <div>
+        <dt>Shares</dt>
+        <dd>None held now</dd>
+      </div>
+    }
+    <div>
+      <dt>Realized gain</dt>
+      <dd><app-change [amount]="d.realizedGain" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
+    </div>
+    <div>
+      <dt>Dividends</dt>
+      <dd class="num">{{ d.dividends | money: d.baseCurrency }}</dd>
+    </div>
+  </dl>
+
+  <section class="panel">
+    <h2>Transactions</h2>
+    <app-transactions-table [transactions]="d.transactions" (edit)="edit($event)" (remove)="remove($event)" />
+  </section>
+} @else {
+  <p class="muted state">Loading…</p>
+}

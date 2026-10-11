@@ -1,0 +1,51 @@
+<div class="card">
+  <a class="brand" routerLink="/">Money Monkey</a>
+
+  @if (sent(); as s) {
+    <h1>Check your email</h1>
+    <p class="lede">
+      We sent a link to <strong>{{ s.email }}</strong>. Open it on the device you want to use; it works once.
+    </p>
+    @if (s.inboxUrl) {
+      <a mat-stroked-button [href]="s.inboxUrl" target="_blank" rel="noopener">
+        Open the local inbox
+        <mat-icon iconPositionEnd svgIcon="open_in_new" />
+      </a>
+    }
+    <button mat-button type="button" class="again" (click)="sent.set(null)">Use a different email</button>
+  } @else {
+    <h1>Sign in</h1>
+
+    @if (auth.passkeysSupported) {
+      <button mat-flat-button type="button" class="passkey" (click)="passkey()" [disabled]="busy()">
+        <mat-icon svgIcon="fingerprint" />
+        Sign in with a passkey
+      </button>
+      <div class="divider" aria-hidden="true"><span>or</span></div>
+    }
+
+    <form (ngSubmit)="email()" novalidate>
+      <mat-form-field>
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          name="email"
+          autocomplete="email"
+          [ngModel]="address()"
+          (ngModelChange)="address.set($event)"
+          required>
+      </mat-form-field>
+      <button mat-stroked-button type="submit" [disabled]="busy()">Email me a sign-in link</button>
+    </form>
+
+    <p class="hint">
+      New here? The link activates your account. After that, add a passkey so Windows Hello, Touch ID or your
+      password manager signs you in.
+    </p>
+
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+  }
+</div>

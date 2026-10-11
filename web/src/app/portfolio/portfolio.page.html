@@ -1,0 +1,178 @@
+@if (notFound()) {
+  <section class="state">
+    <h1>Portfolio not found</h1>
+    <p>It may have been deleted. Pick another portfolio from the list.</p>
+  </section>
+} @else if (failed()) {
+  <section class="state">
+    <h1>The portfolio did not load</h1>
+    <p>Money Monkey could not reach its server. Check that the API is running, then try again.</p>
+    <button mat-stroked-button (click)="refresh()">Try again</button>
+  </section>
+} @else if (detail(); as d) {
+  <header class="header">
+    <div class="identity">
+      <h1>{{ d.summary.name }} <span class="currency-code">{{ d.summary.baseCurrency }}</span></h1>
+      @if (d.summary.description) {
+        <p class="description">{{ d.summary.description }}</p>
+      }
+      @if (d.summary.access !== 'Owner') {
+        <p class="access" data-testid="access">
+          <mat-icon svgIcon="group" aria-hidden="true" />
+          Shared by {{ d.summary.ownerEmail }}{{ d.summary.access === 'Edit' ? '. You can record transactions and cash.' : ', to view.' }}
+        </p>
+      } @else if (d.summary.sharedWith > 0) {
+        <button type="button" class="access link" data-testid="access" (click)="share()">
+          <mat-icon svgIcon="group" aria-hidden="true" />
+          Shared with {{ d.summary.sharedWith }} {{ d.summary.sharedWith === 1 ? 'person' : 'people' }}
+        </button>
+      }
+    </div>
+    <div class="actions">
+      @if (canEdit()) {
+        <button mat-stroked-button (click)="editCash()">
+          <mat-icon svgIcon="account_balance_wallet" />
+          Cash
+        </button>
+        <button mat-flat-button (click)="addTransaction()">
+          <mat-icon svgIcon="add" />
+          Add transaction
+        </button>
+      }
+      @if (isOwner()) {
+        <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Portfolio options">
+          <mat-icon svgIcon="more_vert" />
+        </button>
+        <mat-menu #menu="matMenu" xPosition="before">
+          <button mat-menu-item (click)="share()"><mat-icon svgIcon="share" />Share…</button>
+          <button mat-menu-item (click)="editPortfolio()"><mat-icon svgIcon="edit" />Edit portfolio</button>
+          <button mat-menu-item (click)="deletePortfolio()"><mat-icon svgIcon="delete" />Delete portfolio</button>
+        </mat-menu>
+      }
+    </div>
+  </header>
+
+  <section class="hero">
+    <app-hero-figure [value]="d.summary.totalValue" [currency]="d.summary.baseCurrency" />
+    <dl class="facts">
+      <div>
+        <dt>Today</dt>
+        <dd><app-change [amount]="d.summary.dayChange" [percent]="d.summary.dayChangePercent" [currency]="d.summary.baseCurrency" /></dd>
+      </div>
+      <div>
+        <dt>Total return</dt>
+        <dd>
+          @if (d.summary.totalReturn !== null) {
+            <app-change [amount]="d.summary.totalReturn" [percent]="d.summary.totalReturnPercent" [currency]="d.summary.baseCurrency" />
+          } @else {
+            <span class="muted">Record a deposit to track</span>
+          }
+        </dd>
+      </div>
+      @if (d.summary.annualizedReturn !== null) {
+        <div>
+          <dt>Per year, money-weighted</dt>
+          <dd><app-change [percent]="d.summary.annualizedReturn" [showArrow]="false" /></dd>
+        </div>
+      }
+      <div>
+        <dt>Net deposits</dt>
+        <dd class="num">{{ d.summary.netContributions | money: d.summary.baseCurrency }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  @if (suggestions().length || d.warnings.length) {
+    <section class="notices" aria-label="Things to check">
+      @for (s of suggestions(); track s.kind + s.securityId + s.date) {
+        <div class="notice suggestion">
+          <mat-icon [svgIcon]="s.kind === 'Split' ? 'call_split' : 'payments'" aria-hidden="true" />
+          <p>{{ describeSuggestion(s) }}</p>
+          @if (canEdit()) {
+            <div class="notice-actions">
+              <button mat-stroked-button (click)="recordSuggestion(s)">Record {{ s.kind === 'Split' ? 'split' : 'dividend' }}</button>
+              <button mat-button (click)="dismissSuggestion(s)">Dismiss</button>
+            </div>
+          }
+        </div>
+      }
+      @for (w of d.warnings; track w) {
+        <div class="notice warning">
+          <mat-icon svgIcon="warning" aria-hidden="true" />
+          <p>{{ w }}</p>
+        </div>
+      }
+    </section>
+  }
+
+  <section class="panel">
+    <app-value-chart
+      [points]="history()?.points ?? []"
+      [currency]="d.summary.baseCurrency"
+      [range]="range()"
+      [loading]="loadingHistory()"
+      (rangeChange)="range.set($event)" />
+  </section>
+
+  <dl class="stats">
+    <div>
+      <dt>Book value</dt>
+      <dd class="num">{{ d.costBasis | money: d.summary.baseCurrency }}</dd>
+    </div>
+    <div>
+      <dt>Unrealized gain</dt>
+      <dd><app-change [amount]="d.unrealizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
+    </div>
+    <div>
+      <dt>Realized gain</dt>
+      <dd><app-change [amount]="d.realizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
+    </div>
+    <div>
+      <dt>Dividends and interest</dt>
+      <dd class="num">{{ d.dividends + d.interest | money: d.summary.baseCurrency }}</dd>
+    </div>
+    <div>
+      <dt>Cash</dt>
+      <dd class="num" [class.loss]="d.summary.cashValue < 0">{{ d.summary.cashValue | money: d.summary.baseCurrency }}</dd>
+    </div>
+    <div>
+      <dt>Fees paid</dt>
+      <dd class="num">{{ d.fees | money: d.summary.baseCurrency }}</dd>
+    </div>
+  </dl>
+
+  <section class="panel tabs-panel">
+    <mat-tab-group [selectedIndex]="tab()" (selectedIndexChange)="tab.set($event)" animationDuration="0ms" mat-stretch-tabs="false" mat-align-tabs="start">
+      <mat-tab>
+        <ng-template mat-tab-label>Holdings <span class="count">({{ d.holdings.length }})</span></ng-template>
+        <app-holdings-table
+          [holdings]="d.holdings"
+          [cash]="d.cash"
+          [summary]="d.summary"
+          [unrealized]="d.unrealizedGain"
+          [readonly]="!canEdit()"
+          (open)="openHolding($event)"
+          (add)="addTransaction()"
+          (editCash)="editCash($event)" />
+      </mat-tab>
+      <mat-tab>
+        <ng-template mat-tab-label>Transactions <span class="count">({{ transactions().length }})</span></ng-template>
+        <app-transactions-table
+          [transactions]="transactions()"
+          [readonly]="!canEdit()"
+          (edit)="editTransaction($event)"
+          (remove)="deleteTransaction($event)" />
+      </mat-tab>
+      <mat-tab>
+        <ng-template mat-tab-label>Income<span class="long"> and gains</span></ng-template>
+        @if (realized(); as r) {
+          <app-income-panel [report]="r" />
+        } @else {
+          <p class="muted loading">Loading…</p>
+        }
+      </mat-tab>
+    </mat-tab-group>
+  </section>
+} @else {
+  <p class="muted state">Loading the portfolio…</p>
+}

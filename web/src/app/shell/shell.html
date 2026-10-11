@@ -1,0 +1,101 @@
+<!-- One outlet whatever the sign-in state, so a page is never re-created mid-flow when the session starts. -->
+<mat-sidenav-container class="container">
+  @if (auth.signedIn()) {
+    <mat-sidenav
+      class="rail"
+      [mode]="wide() ? 'side' : 'over'"
+      [opened]="wide() || menuOpen()"
+      (closedStart)="menuOpen.set(false)"
+      [disableClose]="wide()">
+      <nav aria-label="Main">
+        <a class="brand" routerLink="/">Money Monkey</a>
+
+        <a class="nav-item" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+          <mat-icon svgIcon="dashboard" />
+          <span>Overview</span>
+        </a>
+        <a class="nav-item" routerLink="/assets" routerLinkActive="active">
+          <mat-icon svgIcon="wallet" />
+          <span>All assets</span>
+        </a>
+        <a class="nav-item" routerLink="/quotes" routerLinkActive="active">
+          <mat-icon svgIcon="price_change" />
+          <span>Quotes</span>
+        </a>
+
+        <div class="section">
+          <div class="section-head">
+            <span>Portfolios</span>
+            <button mat-icon-button class="add" (click)="newPortfolio()" aria-label="New portfolio" matTooltip="New portfolio">
+              <mat-icon svgIcon="add" />
+            </button>
+          </div>
+
+          @for (p of portfolios(); track p.id) {
+            <a class="portfolio" [routerLink]="['/portfolios', p.id]" routerLinkActive="active">
+              <span class="name">
+                {{ p.name }}
+                @if (p.access !== 'Owner') {
+                  <mat-icon class="shared" svgIcon="group" [matTooltip]="'Shared by ' + p.ownerEmail" aria-hidden="true" />
+                }
+              </span>
+              <span class="value num">{{ p.totalValue | money: p.baseCurrency }}</span>
+            </a>
+          } @empty {
+            @if (listLoaded()) {
+              <button class="first" type="button" (click)="newPortfolio()">Create your first portfolio</button>
+            }
+          }
+        </div>
+
+        <div class="foot">
+          <a class="nav-item" routerLink="/market" routerLinkActive="active">
+            <mat-icon svgIcon="monitoring" />
+            <span>Prices and rates</span>
+            @if (status(); as s) {
+              @if (s.securitiesTracked > 0) {
+                <span class="freshness" [class.stale]="stale()">
+                  {{ stale() ? 'Check' : (s.pricesAsOf | day: 'short') }}
+                </span>
+              }
+            }
+          </a>
+          <a class="nav-item" routerLink="/account" routerLinkActive="active">
+            <mat-icon svgIcon="account_circle" />
+            <span class="email">{{ auth.email() }}</span>
+          </a>
+          <button class="nav-item theme" type="button" (click)="theme.cycle()" [attr.aria-label]="themeLabel()">
+            <mat-icon [svgIcon]="themeIcon()" />
+            <span>{{ themeLabel() }}</span>
+          </button>
+          @if (pwa.canInstall()) {
+            <button class="nav-item" type="button" (click)="pwa.install()">
+              <mat-icon svgIcon="download" />
+              <span>Install app</span>
+            </button>
+          }
+        </div>
+      </nav>
+    </mat-sidenav>
+  }
+
+  <mat-sidenav-content class="content" [class.bare]="!auth.signedIn()">
+    @if (auth.signedIn()) {
+      @if (!wide()) {
+        <header class="topbar">
+          <button mat-icon-button (click)="menuOpen.set(true)" aria-label="Open navigation">
+            <mat-icon svgIcon="menu" />
+          </button>
+          <a class="brand small" routerLink="/">Money Monkey</a>
+        </header>
+      }
+    } @else {
+      <button class="bare-theme" type="button" (click)="theme.cycle()" [attr.aria-label]="themeLabel()">
+        <mat-icon [svgIcon]="themeIcon()" />
+      </button>
+    }
+    <main>
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

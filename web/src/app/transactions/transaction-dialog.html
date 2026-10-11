@@ -1,0 +1,151 @@
+<h2 mat-dialog-title>{{ editing ? 'Edit transaction' : 'Add transaction' }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <mat-dialog-content>
+    <div class="types" role="radiogroup" aria-label="Transaction type" (keydown)="onTypeKey($event)">
+      @for (t of types; track t.type) {
+        <button
+          type="button"
+          role="radio"
+          class="type"
+          [class.selected]="type() === t.type"
+          [attr.aria-checked]="type() === t.type"
+          [tabIndex]="type() === t.type ? 0 : -1"
+          [attr.data-type]="t.type"
+          (click)="setType(t.type)">
+          <mat-icon [svgIcon]="t.icon" aria-hidden="true" />
+          {{ t.label }}
+        </button>
+      }
+    </div>
+
+    @if (needsSecurity()) {
+      <app-security-picker [holdings]="pickerHoldings()" [(value)]="security" />
+      @if (type() === 'Sell' && held(); as h) {
+        <p class="held">
+          You hold {{ h.quantity }} shares.
+          <button type="button" class="link" (click)="sellAll()">Sell all</button>
+        </p>
+      }
+    }
+
+    <div class="grid">
+      <mat-form-field>
+        <mat-label>Date</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="date" [max]="maxDate">
+        <mat-datepicker-toggle matIconSuffix [for]="picker" />
+        <mat-datepicker #picker />
+      </mat-form-field>
+
+      @switch (kind()) {
+        @case ('trade') {
+          <mat-form-field>
+            <mat-label>Shares</mat-label>
+            <input matInput type="number" formControlName="quantity" min="0" step="any" inputmode="decimal">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>{{ type() === 'TransferIn' ? 'Cost per share' : 'Price per share' }}</mat-label>
+            <input matInput type="number" formControlName="price" min="0" step="any" inputmode="decimal" (input)="markEdited('price')">
+            <span matTextSuffix>{{ currency() }}</span>
+            @if (priceHint()) {
+              <mat-hint>{{ priceHint() }}</mat-hint>
+            }
+          </mat-form-field>
+          @if (type() !== 'TransferIn') {
+            <mat-form-field>
+              <mat-label>Commission</mat-label>
+              <input matInput type="number" formControlName="fee" min="0" step="any" inputmode="decimal" placeholder="0">
+              <span matTextSuffix>{{ currency() }}</span>
+            </mat-form-field>
+          }
+        }
+
+        @case ('split') {
+          <mat-form-field>
+            <mat-label>Shares before</mat-label>
+            <input matInput type="number" formControlName="splitFrom" min="0" step="any">
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Shares after</mat-label>
+            <input matInput type="number" formControlName="splitTo" min="0" step="any">
+            <mat-hint>A 4-for-1 split is 1 then 4; a 1-for-10 consolidation is 10 then 1.</mat-hint>
+          </mat-form-field>
+        }
+
+        @case ('dividend') {
+          <mat-form-field>
+            <mat-label>Dividend received</mat-label>
+            <input matInput type="number" formControlName="amount" min="0" step="any" inputmode="decimal">
+            <mat-hint>Before any tax withheld</mat-hint>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Tax withheld</mat-label>
+            <input matInput type="number" formControlName="fee" min="0" step="any" inputmode="decimal" placeholder="0">
+            <mat-hint>e.g. 15% on US dividends</mat-hint>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Paid in</mat-label>
+            <mat-select formControlName="currency" (selectionChange)="markEdited('currency')">
+              @for (c of currencyOptions(); track c) {
+                <mat-option [value]="c">{{ c }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+        @case ('cash') {
+          <mat-form-field>
+            <mat-label>Amount</mat-label>
+            <input matInput type="number" formControlName="amount" min="0" step="any" inputmode="decimal">
+            @if (type() === 'Deposit' || type() === 'Withdrawal') {
+              <mat-hint>Money you put in or took out, for your return figures. It doesn't change the cash balance, which you set on the portfolio page.</mat-hint>
+            }
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Currency</mat-label>
+            <mat-select formControlName="currency" (selectionChange)="markEdited('currency')">
+              @for (c of currencyOptions(); track c) {
+                <mat-option [value]="c">{{ c }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+
+      }
+
+      @if (showFxRate()) {      }
+
+      @if (showFxRate()) {
+        <mat-form-field class="rate">
+          <mat-label>{{ currency() }} to {{ base }} rate</mat-label>
+          <input matInput type="number" formControlName="fxRate" min="0" step="any" inputmode="decimal" (input)="markEdited('fx')">
+          <mat-hint>{{ fxHint() }}</mat-hint>
+        </mat-form-field>
+      }
+    </div>
+
+    <mat-form-field>
+      <mat-label>Note (optional)</mat-label>
+      <input matInput formControlName="note" maxlength="500">
+    </mat-form-field>
+
+    @if (summary(); as s) {
+      <p class="summary">
+        <span class="secondary">{{ s.label }}</span>
+        <strong class="num">{{ s.value }}</strong>
+        @if (s.extra) {
+          <span class="muted">{{ s.extra }}</span>
+        }
+      </p>
+    }
+
+    @if (error()) {
+      <p class="error" role="alert"><mat-icon svgIcon="error" aria-hidden="true" />{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button type="submit" [disabled]="saving()">{{ actionLabel() }}</button>
+  </mat-dialog-actions>
+</form>

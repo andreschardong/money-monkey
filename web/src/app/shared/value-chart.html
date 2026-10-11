@@ -1,0 +1,54 @@
+<div class="head">
+  <ul class="legend" aria-label="Chart legend">
+    <li><i class="key" style="--key: var(--chart-1)"></i>Value</li>
+    <li><i class="key" style="--key: var(--chart-2)"></i>Net deposits</li>
+  </ul>
+
+  <div class="controls">
+    <mat-button-toggle-group
+      [value]="range()"
+      (change)="rangeChange.emit($event.value)"
+      hideSingleSelectionIndicator
+      aria-label="Time range">
+      @for (r of ranges; track r) {
+        <mat-button-toggle [value]="r">{{ r === 'ALL' ? 'All' : r }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    <button mat-button type="button" class="view-switch" (click)="showTable.set(!showTable())">
+      {{ showTable() ? 'Chart' : 'Table' }}
+    </button>
+  </div>
+</div>
+
+<div class="plot" [class.refreshing]="loading()">
+  @if (points().length < 2) {
+    <p class="empty muted">The chart starts once there are at least two days of history.</p>
+  } @else if (showTable()) {
+    <div class="table-scroll">
+      <table class="data">
+        <thead>
+          <tr>
+            <th appSort="date" [sort]="sort" defaultDirection="desc">Month end</th>
+            <th class="right" appSort="value" [sort]="sort" defaultDirection="desc">Value</th>
+            <th class="right" appSort="netContributions" [sort]="sort" defaultDirection="desc">Net deposits</th>
+            <th class="right" appSort="earned" [sort]="sort" defaultDirection="desc">Earned</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of sortedRows(); track row.date) {
+            <tr>
+              <td>{{ row.date | day }}</td>
+              <td class="right num">{{ row.value | money: currency() }}</td>
+              <td class="right num">{{ row.netContributions | money: currency() }}</td>
+              <td class="right num" [class.gain]="row.value > row.netContributions" [class.loss]="row.value < row.netContributions">
+                {{ row.value - row.netContributions | money: currency() : true }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <app-echart [options]="options()" />
+  }
+</div>
