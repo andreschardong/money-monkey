@@ -5,6 +5,23 @@
 A personal portfolio tracker for stocks, ETFs and funds on the TSX, TSXV, NYSE, Nasdaq and European exchanges.
 Portfolios report in CAD, USD or EUR, and each one can hold cash and securities in any currency.
 
+![Money Monkey on a desktop and a phone](docs/screenshots/hero.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/portfolio.png" alt="A portfolio: value, return, suggestions for dividends and splits, and the value chart"></td>
+    <td><img src="docs/screenshots/assets.png" alt="All assets across portfolios, in CAD"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/quotes.png" alt="Quotes: a year of closes for SHOP.TO with range statistics"></td>
+    <td><img src="docs/screenshots/overview-dark.png" alt="The overview in dark mode"></td>
+  </tr>
+</table>
+
+<p align="center"><img src="docs/screenshots/phone.png" alt="The overview and a portfolio on a phone" width="560"></p>
+
+The screenshots show demo data; `tests/browser/readme-shots.mjs` regenerates them.
+
 ## What it does
 
 - **Portfolios in CAD, USD or EUR.** Like a Questrade or IBKR account, a CAD portfolio can hold USD cash and US
