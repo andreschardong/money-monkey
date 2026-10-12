@@ -40,8 +40,8 @@ The screenshots show demo data; `tests/browser/readme-shots.mjs` regenerates the
   currency at each trade's own exchange rate. Realized gains, dividends and interest are summarized by year.
 - **Nothing can quietly break the history.** Every add, edit or delete replays all transactions; a change that
   would sell shares you don't hold is refused with the reason.
-- **Daily prices without an API key.** Closes come from Yahoo Finance once each weekday after the markets close
-  (5:30 p.m. Toronto). A refresh missed while the PC was off runs when Money Monkey starts. If a symbol fails and an
+- **Prices without an API key.** Quotes come from Yahoo Finance every 15 minutes while markets are open, and the
+  final closes once each weekday after they close (5:30 p.m. Toronto). A refresh missed while the PC was off runs when Money Monkey starts. If a symbol fails and an
   Alpha Vantage key is set, its latest close comes from there instead.
 - **Official exchange rates** from the Bank of Canada (ECB rates before 2017 and as a backup).
 - **Suggestions** for splits and recent dividends that Yahoo reports but you haven't recorded.
@@ -173,7 +173,11 @@ tests            xUnit v3: engine tests, Yahoo parsing tests, API tests on a rea
   rate of its own date. They are for the return figures only and do not change the cash balance.
 - **Total return** is value minus net deposits, shown once a deposit is recorded. After a year of history, the
   money-weighted annual return (XIRR) is shown too.
-- **Today** is shares times the change between the last two closes, restated across a split.
+- **Today** is each holding's move in the latest trading session: shares times the change from the previous
+  close, restated across a split. While markets are open, quotes refresh every 15 minutes (Yahoo's free prices
+  run about 15 minutes late), so it follows the day. A holding whose exchange is closed that day (a TSX stock on
+  Canadian Thanksgiving) adds nothing. Before the open and at weekends the label shows the last session's date,
+  such as "Fri, Oct 9", instead of "Today".
 - **Prices are stored as actually traded**, not adjusted for later splits, so a split has to be recorded (or the
   suggestion accepted) for the share count and the chart to line up.
 - Buys and sells use the Bank of Canada rate for their date unless you enter your broker's rate.

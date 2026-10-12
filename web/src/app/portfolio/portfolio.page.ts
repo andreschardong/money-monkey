@@ -1,5 +1,5 @@
 import { httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, input, linkedSignal, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, linkedSignal, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
@@ -9,8 +9,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Api, problemMessage } from '../core/api';
-import { FORMAT_PIPES, formatDate, formatMoney, formatQuantity } from '../core/format';
-import { History, PortfolioDetail, Range, RealizedReport, Suggestion, Transaction } from '../core/models';
+import { FORMAT_PIPES, formatDate, formatMoney, formatQuantity, sessionLabel } from '../core/format';
+import { History, IsoDate, PortfolioDetail, Range, RealizedReport, Suggestion, Transaction } from '../core/models';
 import { MarketStatusStore, PortfolioList } from '../core/stores';
 import { Change } from '../shared/change';
 import { confirm } from '../shared/confirm-dialog';
@@ -79,7 +79,18 @@ export class PortfolioPage {
   protected readonly canEdit = computed(() => this.detail()?.summary.access !== 'View');
   protected readonly isOwner = computed(() => (this.detail()?.summary.access ?? 'Owner') === 'Owner');
 
+  protected dayLabel(session: IsoDate | null): string {
+    return sessionLabel(session, this.market.today());
+  }
+
   constructor() {
+    // Reload when a quote refresh finishes, so "Today" keeps up while the page stays open.
+    effect(() => {
+      if (this.market.pricesVersion() > 0) {
+        untracked(() => this.refresh());
+      }
+    });
+
     // Keep the browser tab title in step with the portfolio name.
     effect(() => {
       const name = this.detail()?.summary.name;

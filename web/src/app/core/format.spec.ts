@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
-import { direction, formatDate, formatMoney, formatPercent, formatPrice, formatQuantity, fromIsoDate, toIsoDate } from './format';
+import { direction, formatDate, formatMoney, formatPercent, formatPrice, formatQuantity, fromIsoDate, toIsoDate, sessionLabel } from './format';
 import { LocalDateAdapter } from './date-adapter';
 
 describe('formatMoney', () => {
@@ -68,5 +68,16 @@ describe('direction', () => {
     expect(direction(5)).toBe('gain');
     expect(direction(-5)).toBe('loss');
     expect(direction(null)).toBe('');
+  });
+});
+
+describe('sessionLabel', () => {
+  it('says Today when the day change is from today', () => {
+    expect(sessionLabel('2026-10-12', '2026-10-12')).toBe('Today');
+    expect(sessionLabel(null, '2026-10-12')).toBe('Today');
+  });
+
+  it("names the session's date before the open or at a weekend", () => {
+    expect(sessionLabel('2026-10-09', '2026-10-12')).toBe('Fri, Oct 9');
   });
 });

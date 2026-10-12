@@ -224,6 +224,25 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
     }
 
     [Fact]
+    public async Task Today_counts_only_holdings_that_traded_in_the_latest_session()
+    {
+        var portfolio = await CreatePortfolioAsync("CAD");
+        await AddAsync(portfolio, new TransactionRequest(TransactionType.Buy, D("2026-09-01"), Symbol: "SHOP.TO", Quantity: 10, Price: 100m));
+        await AddAsync(portfolio, new TransactionRequest(TransactionType.Buy, D("2026-09-01"), Symbol: "HOLI.TO", Quantity: 10, Price: 50m));
+
+        var detail = await GetAsync<PortfolioDetailDto>($"/api/portfolios/{portfolio}");
+        Assert.Equal(FolioApiFactory.Today, detail.Summary.DayChangeDate);
+        // SHOP.TO rose 1 % today; HOLI.TO's exchange was closed, so its 10 % move the day before doesn't count.
+        Assert.Equal(10m, detail.Summary.DayChange);
+        Assert.Equal(0m, detail.Holdings.Single(h => h.Symbol == "HOLI.TO").DayChange);
+
+        var overview = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        Assert.Equal(FolioApiFactory.Today, overview.DayChangeDate);
+        var assets = await GetAsync<AssetsDto>("/api/assets?currency=CAD");
+        Assert.Equal(FolioApiFactory.Today, assets.DayChangeDate);
+    }
+
+    [Fact]
     public async Task The_export_carries_everything_the_account_entered()
     {
         var portfolio = await CreatePortfolioAsync("CAD");

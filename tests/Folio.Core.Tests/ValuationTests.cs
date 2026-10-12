@@ -17,6 +17,65 @@ public class ValuationTests
     }
 
     [Fact]
+    public void The_day_change_counts_only_holdings_that_traded_in_the_latest_session()
+    {
+        var b = new LedgerBuilder();
+        b.Buy("2026-10-01", Aapl, 10, 200m, currency: "USD", fx: 1.40m);
+        b.Buy("2026-10-01", Shop, 20, 100m);
+        var prices = new PriceTable();
+        prices.Add(Aapl, D("2026-10-09"), 240m);
+        prices.Add(Aapl, D("2026-10-12"), 250m);   // New York traded on Monday
+        prices.Add(Shop, D("2026-10-08"), 100m);
+        prices.Add(Shop, D("2026-10-09"), 110m);   // Toronto was closed on Monday: its newest close is Friday's
+
+        var monday = PortfolioValuator.Value(b.Replay(), D("2026-10-12"), prices, Rates(), CashLedger.Empty, D("2026-10-12"));
+        Assert.Equal(D("2026-10-12"), monday.DayChangeDate);
+        Assert.Equal(140m, monday.DayChange);                                      // 10 x (250 - 240) x 1.40; SHOP adds nothing
+        Assert.Equal(0m, monday.Holdings.Single(h => h.Position.SecurityId == Shop).DayChangeBase);
+        Assert.Equal(0.1m, monday.Holdings.Single(h => h.Position.SecurityId == Shop).DayChangePercent);   // its last move, for display
+
+        // Before Monday's open the latest session is Friday, and both moved then.
+        var morning = PortfolioValuator.Value(b.Replay(), D("2026-10-12"), Without(prices, Aapl, D("2026-10-12")), Rates(), CashLedger.Empty, D("2026-10-09"));
+        Assert.Equal(D("2026-10-09"), morning.DayChangeDate);
+        Assert.Equal(20m * 10m, morning.DayChange);                                // SHOP 20 x (110 - 100); AAPL has no Thursday close
+    }
+
+    [Fact]
+    public void Without_a_session_the_newest_close_among_the_holdings_is_the_day()
+    {
+        var b = new LedgerBuilder();
+        b.Buy("2026-10-01", Shop, 20, 100m);
+        var prices = new PriceTable();
+        prices.Add(Shop, D("2026-10-08"), 100m);
+        prices.Add(Shop, D("2026-10-09"), 110m);
+
+        var v = PortfolioValuator.Value(b.Replay(), D("2026-10-10"), prices, Rates(), CashLedger.Empty);
+        Assert.Equal(D("2026-10-09"), v.DayChangeDate);
+        Assert.Equal(200m, v.DayChange);
+
+        var weeksLater = PortfolioValuator.Value(b.Replay(), D("2026-10-30"), prices, Rates(), CashLedger.Empty);
+        Assert.Null(weeksLater.DayChangeDate);
+        Assert.Equal(0m, weeksLater.DayChange);
+    }
+
+    private static PriceTable Without(PriceTable source, Guid security, DateOnly date)
+    {
+        var copy = new PriceTable();
+        foreach (var id in new[] { Shop, Aapl })
+        {
+            for (var day = D("2026-09-01"); day <= D("2026-10-31"); day = day.AddDays(1))
+            {
+                if (id == security && day == date)
+                    continue;
+                if (source.GetPrice(id, day) is { } p && p.Date == day)
+                    copy.Add(id, day, p.Close);
+            }
+        }
+
+        return copy;
+    }
+
+    [Fact]
     public void Values_holdings_and_entered_cash_in_the_base_currency()
     {
         var b = new LedgerBuilder();
