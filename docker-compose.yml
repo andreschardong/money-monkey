@@ -35,6 +35,7 @@ services:
       Auth__PasskeyDomain: "${FOLIO_PASSKEY_DOMAIN:-localhost}"
       Auth__InboxUrl: "${FOLIO_INBOX_URL:-http://localhost:8025}"
       Auth__AllowedEmails: "${FOLIO_ALLOWED_EMAILS:-}"
+      Auth__AndroidApps: "${FOLIO_ANDROID_APPS:-}"
       Auth__BehindProxy: "${FOLIO_BEHIND_PROXY:-false}"
       Email__Host: "${SMTP_HOST:-mailpit}"
       Email__Port: "${SMTP_PORT:-1025}"

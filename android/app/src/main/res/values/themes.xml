@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws everything; this only sets the window colour shown while the app starts. -->
+    <style name="Theme.MoneyMonkey" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/paper</item>
+    </style>
+
+    <color name="paper">#F2F4F5</color>
+    <color name="ic_launcher_background">#172430</color>
+</resources>
