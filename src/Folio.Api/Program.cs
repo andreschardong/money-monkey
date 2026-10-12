@@ -82,6 +82,9 @@ builder.Services.Configure<SecurityStampValidatorOptions>(options => options.Val
 var publicUrl = builder.Configuration["Auth:PublicUrl"] ?? "http://localhost:8090";
 // A passkey ceremony carries the page's origin; behind a TLS-terminating proxy the request itself may say
 // http, so the public address is the origin of record (the request's own origin stays fine for development).
+// The Android app's passkey ceremonies carry "android:apk-key-hash:<certificate hash>" as their origin.
+var androidApps = AndroidApp.Parse(builder.Configuration["Auth:AndroidApps"]);
+var androidOrigins = androidApps.SelectMany(a => a.Fingerprints).Select(AndroidApp.OriginOf).ToHashSet(StringComparer.Ordinal);
 builder.Services.Configure<IdentityPasskeyOptions>(options => options.ValidateOrigin = context =>
 {
     var allowed = new Uri(publicUrl).GetLeftPart(UriPartial.Authority);
@@ -89,7 +92,8 @@ builder.Services.Configure<IdentityPasskeyOptions>(options => options.ValidateOr
     var own = $"{request.Scheme}://{request.Host}";
     var ok = !context.CrossOrigin &&
         (string.Equals(context.Origin, allowed, StringComparison.OrdinalIgnoreCase) ||
-         string.Equals(context.Origin, own, StringComparison.OrdinalIgnoreCase));
+         string.Equals(context.Origin, own, StringComparison.OrdinalIgnoreCase) ||
+         androidOrigins.Contains(context.Origin));
     return ValueTask.FromResult(ok);
 });
 builder.Services.ConfigureApplicationCookie(options =>
@@ -294,6 +298,14 @@ api.MapSecurityEndpoints();
 api.MapMarketEndpoints();
 
 app.MapGet("/health", () => TypedResults.Ok(new { status = "ok" })).ExcludeFromDescription();
+// Digital Asset Links: lets the Android app use this site's passkeys and open its sign-in links.
+app.MapGet("/.well-known/assetlinks.json", () => TypedResults.Json(androidApps.Select(a => new
+    {
+        relation = new[] { "delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds" },
+        target = new { @namespace = "android_app", package_name = a.PackageName, sha256_cert_fingerprints = a.Fingerprints },
+    })))
+    .AllowAnonymous()
+    .ExcludeFromDescription();
 app.MapFallback("/api/{**path}", () => TypedResults.NotFound()).ExcludeFromDescription();
 app.MapFallbackToFile("index.html");
 

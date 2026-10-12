@@ -1,0 +1,3 @@
+# The Gradle wrapper script must keep Unix line endings to run on Linux CI and macOS.
+android/gradlew text eol=lf
+*.bat text eol=crlf

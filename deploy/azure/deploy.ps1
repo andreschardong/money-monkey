@@ -89,6 +89,7 @@ $settings = @(
     "Auth__PasskeyDomain=$Hostname",
     "Auth__BehindProxy=true",
     "Auth__AllowedEmails=$AllowedEmails",
+    "Auth__AndroidApps=$($dotEnv['FOLIO_ANDROID_APPS'])",
     "Auth__InboxUrl=",
     "Email__Host=smtp.gmail.com",
     "Email__Port=587",

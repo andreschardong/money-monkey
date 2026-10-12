@@ -28,6 +28,9 @@ public class FolioApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     /// <summary>Who may use the app; empty means anyone, which the ordinary tests rely on.</summary>
     protected virtual string AllowedEmails => string.Empty;
 
+    /// <summary>Trusted Android app builds (read at start-up); none for the ordinary tests.</summary>
+    protected virtual string AndroidApps => string.Empty;
+
     /// <summary>Settings a test can change while the app runs, such as the allowed email list.</summary>
     public MutableSettings Settings { get; } = new();
 
@@ -63,6 +66,7 @@ public class FolioApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         Settings.Set("Auth:AllowedEmails", AllowedEmails);
         builder.ConfigureAppConfiguration(config => config.Add(Settings));
         builder.UseSetting("Auth:PublicUrl", "http://localhost");
+        builder.UseSetting("Auth:AndroidApps", AndroidApps);
         builder.UseSetting("LogFile:Path", "");
         builder.ConfigureTestServices(services =>
         {
