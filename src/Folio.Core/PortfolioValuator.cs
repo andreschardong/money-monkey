@@ -34,7 +34,8 @@ public sealed record PortfolioValuation(
     decimal Fees,
     decimal TaxWithheld,
     double? AnnualizedReturn,
-    DateOnly? PricesAsOf)
+    DateOnly? PricesAsOf,
+    DateOnly? DayChangeDate = null)
 {
     public decimal HoldingsValue => Holdings.Sum(h => h.MarketValueBase);
     public decimal CashValue => Cash.Sum(c => c.ValueBase);
@@ -70,13 +71,25 @@ public static class PortfolioValuator
     /// <summary>Annualized return is reported once the money has been invested for at least a year.</summary>
     private const int MinDaysForAnnualized = 365;
 
-    public static PortfolioValuation Value(PortfolioLedger ledger, DateOnly asOf, IPriceSource prices, IFxSource fx, CashLedger cash)
+    /// <summary>
+    /// Values the portfolio on <paramref name="asOf"/>. The day change is the move in the latest trading session,
+    /// <paramref name="session"/>: the newest close the app has anywhere, so a holding whose market was closed that
+    /// day (a TSX stock on Canadian Thanksgiving, say) adds nothing instead of repeating its previous session's move.
+    /// Without a session, the newest close among these holdings stands in.
+    /// </summary>
+    public static PortfolioValuation Value(
+        PortfolioLedger ledger, DateOnly asOf, IPriceSource prices, IFxSource fx, CashLedger cash, DateOnly? session = null)
     {
+        var priced = ledger.OpenPositions.Select(p => (Position: p, Price: prices.GetPrice(p.SecurityId, asOf))).ToList();
+        var sessionDate = session ?? priced.Where(x => x.Price is not null).Select(x => (DateOnly?)x.Price!.Value.Date).Max();
+        // A session this old is no longer "the day" (holdings that stopped trading, an app offline for weeks).
+        if (sessionDate is { } latest && asOf.DayNumber - latest.DayNumber > DayChangeMaxAgeDays)
+            sessionDate = null;
+
         var holdings = new List<HoldingValuation>();
-        foreach (var position in ledger.OpenPositions)
+        foreach (var (position, price) in priced)
         {
             var rate = fx.GetRate(position.Currency, ledger.BaseCurrency, asOf) ?? 1m;
-            var price = prices.GetPrice(position.SecurityId, asOf);
             if (price is null)
             {
                 holdings.Add(new HoldingValuation(position, null, null, rate, position.CostLocal, position.CostBase, 0m));
@@ -89,7 +102,8 @@ public static class PortfolioValuator
             var fresh = asOf.DayNumber - price.Value.Date.DayNumber <= DayChangeMaxAgeDays;
             var previousClose = fresh ? PreviousClose(position, price.Value.Date, asOf, prices) : null;
             var valueLocal = position.Quantity * close;
-            var dayChangeLocal = previousClose is { } prev ? position.Quantity * (close - prev) : 0m;
+            // Only a holding that traded in the session moved in it.
+            var dayChangeLocal = previousClose is { } prev && price.Value.Date == sessionDate ? position.Quantity * (close - prev) : 0m;
             holdings.Add(new HoldingValuation(position, current, previousClose, rate, valueLocal, valueLocal * rate, dayChangeLocal * rate));
         }
 
@@ -105,7 +119,7 @@ public static class PortfolioValuator
 
         var pricesAsOf = holdings.Where(h => h.Price is not null).Select(h => (DateOnly?)h.Price!.Value.Date).Max();
         var valuation = new PortfolioValuation(ledger.BaseCurrency, asOf, holdings, balances, ledger.NetContributions,
-            ledger.RealizedGain, ledger.Dividends, ledger.Interest, ledger.Fees, ledger.TaxWithheld, null, pricesAsOf);
+            ledger.RealizedGain, ledger.Dividends, ledger.Interest, ledger.Fees, ledger.TaxWithheld, null, pricesAsOf, sessionDate);
 
         return valuation with { AnnualizedReturn = Annualized(ledger, asOf, valuation.TotalValue) };
     }

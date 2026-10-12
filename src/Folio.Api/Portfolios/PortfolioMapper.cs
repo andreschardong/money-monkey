@@ -30,7 +30,8 @@ public static class PortfolioMapper
             snapshot.Ledger.FirstDate,
             snapshot.Access.Access,
             snapshot.Access.OwnerEmail,
-            snapshot.Access.SharedWith);
+            snapshot.Access.SharedWith,
+            v.DayChangeDate);
     }
 
     public static PortfolioDetailDto ToDetail(PortfolioSnapshot snapshot)

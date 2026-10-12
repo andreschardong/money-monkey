@@ -41,6 +41,7 @@ public static class AssetEndpoints
         var cash = new Dictionary<string, CashTotal>(StringComparer.Ordinal);
         var warnings = new List<string>();
         DateOnly? pricesAsOf = null;
+        DateOnly? dayChangeDate = null;
 
         foreach (var snapshot in snapshots)
         {
@@ -50,6 +51,8 @@ public static class AssetEndpoints
             warnings.AddRange(snapshot.MissingRates.Select(c => $"{portfolio.Name}: no {c} exchange rate yet, counted 1:1."));
             if (v.PricesAsOf is { } asOf && (pricesAsOf is null || asOf > pricesAsOf))
                 pricesAsOf = asOf;
+            if (v.DayChangeDate is { } session && (dayChangeDate is null || session > dayChangeDate))
+                dayChangeDate = session;
 
             foreach (var h in v.Holdings)
             {
@@ -132,7 +135,8 @@ public static class AssetEndpoints
             pricesAsOf,
             holdingDtos,
             cashDtos,
-            warnings.Concat(missingRates.Select(c => $"No {c} to {display} exchange rate yet; {c} amounts are counted 1:1.")).ToList()));
+            warnings.Concat(missingRates.Select(c => $"No {c} to {display} exchange rate yet; {c} amounts are counted 1:1.")).ToList(),
+            dayChangeDate));
     }
 
     private sealed class HoldingTotal(Security security, string currency)

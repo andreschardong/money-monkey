@@ -27,7 +27,8 @@ public sealed record PortfolioSummaryDto(
     DateOnly? FirstTransactionDate,
     string Access,
     string? OwnerEmail,
-    int SharedWith);
+    int SharedWith,
+    DateOnly? DayChangeDate);
 
 public sealed record PortfolioDetailDto(
     PortfolioSummaryDto Summary,
@@ -283,7 +284,8 @@ public sealed record OverviewDto(
     IReadOnlyList<AllocationDto> ByCurrency,
     IReadOnlyList<AllocationDto> ByAssetType,
     IReadOnlyList<MoverDto> Movers,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    DateOnly? DayChangeDate);
 
 /// <summary>One portfolio's share of a consolidated holding (shares) or cash balance (amount).</summary>
 public sealed record AssetSliceDto(Guid PortfolioId, string PortfolioName, decimal Quantity, decimal Value);
@@ -327,4 +329,5 @@ public sealed record AssetsDto(
     DateOnly? PricesAsOf,
     IReadOnlyList<AssetHoldingDto> Holdings,
     IReadOnlyList<AssetCashDto> Cash,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    DateOnly? DayChangeDate);

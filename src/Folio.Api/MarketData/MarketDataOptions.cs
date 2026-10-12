@@ -10,6 +10,15 @@ public sealed class MarketDataOptions
     /// <summary>Local time of the daily refresh, after North American markets close and the Bank of Canada publishes rates.</summary>
     public TimeOnly DailyRefreshTime { get; set; } = new(17, 30);
 
+    /// <summary>Minutes between quote refreshes while markets are open, so "Today" follows the day; 0 turns them off.</summary>
+    public int IntradayRefreshMinutes { get; set; } = 15;
+
+    /// <summary>Start of the intraday window, the North American open, in the market time zone.</summary>
+    public TimeOnly MarketOpen { get; set; } = new(9, 30);
+
+    /// <summary>End of the intraday window: a little after the close, since free quotes arrive about 15 minutes late.</summary>
+    public TimeOnly IntradayUntil { get; set; } = new(16, 30);
+
     /// <summary>Run the scheduled daily refresh (and catch up on start-up when one was missed).</summary>
     public bool EnableScheduler { get; set; } = true;
 

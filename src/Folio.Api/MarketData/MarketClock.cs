@@ -7,6 +7,15 @@ public sealed class MarketClock(TimeProvider time, IOptions<MarketDataOptions> o
 {
     private readonly TimeZoneInfo _zone = TimeZoneInfo.FindSystemTimeZoneById(options.Value.TimeZone);
     private readonly TimeSpan _refreshAt = options.Value.DailyRefreshTime.ToTimeSpan();
+    private readonly TimeSpan _open = options.Value.MarketOpen.ToTimeSpan();
+    private readonly TimeSpan _intradayUntil = options.Value.IntradayUntil.ToTimeSpan();
+
+    /// <summary>A weekday between the open and a little after the close, when quotes are worth refreshing often.</summary>
+    public bool IsTradingHours()
+    {
+        var local = LocalNow.DateTime;
+        return !IsWeekend(local) && local.TimeOfDay >= _open && local.TimeOfDay <= _intradayUntil;
+    }
 
     public DateTimeOffset UtcNow => time.GetUtcNow();
 
