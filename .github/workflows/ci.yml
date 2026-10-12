@@ -42,4 +42,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t money-monkey .
+      - run: docker build --build-arg GIT_SHA=${{ github.sha }} --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) -t money-monkey .

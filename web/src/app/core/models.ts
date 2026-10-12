@@ -427,6 +427,13 @@ export interface Assets {
   warnings: string[];
 }
 
+/** Which build is running (GET /api/version). */
+export interface Version {
+  version: string;
+  commit: string | null;
+  builtAt: string | null;
+}
+
 export interface Share {
   email: string;
   canEdit: boolean;

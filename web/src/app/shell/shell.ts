@@ -12,7 +12,7 @@ import { Auth } from '../core/auth';
 import { Pwa } from '../core/pwa';
 import { FORMAT_PIPES } from '../core/format';
 import { PortfolioSummary } from '../core/models';
-import { MarketStatusStore, PortfolioList } from '../core/stores';
+import { MarketStatusStore, PortfolioList, VersionStore } from '../core/stores';
 import { Theme } from '../core/theme';
 import { PortfolioDialog } from '../portfolio/portfolio-dialog';
 
@@ -31,6 +31,7 @@ export class Shell {
   protected readonly auth = inject(Auth);
   // Instantiated here so update checks and the install prompt are live from the first page.
   protected readonly pwa = inject(Pwa);
+  protected readonly version = inject(VersionStore).value;
 
   protected readonly wide = toSignal(
     inject(BreakpointObserver).observe('(min-width: 960px)').pipe(map(state => state.matches)),
