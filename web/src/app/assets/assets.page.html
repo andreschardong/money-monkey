@@ -37,7 +37,7 @@
         <dd class="num">{{ a.cashValue | money: a.currency }}</dd>
       </div>
       <div>
-        <dt>Today</dt>
+        <dt>{{ dayLabel(a.dayChangeDate) }}</dt>
         <dd><app-change [amount]="a.dayChange" [percent]="a.dayChangePercent" [currency]="a.currency" /></dd>
       </div>
       <div>

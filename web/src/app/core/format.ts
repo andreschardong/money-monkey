@@ -103,6 +103,11 @@ export function formatDate(iso: IsoDate | null | undefined, style: 'long' | 'sho
   return (style === 'short' ? shortDateFormat : style === 'weekday' ? weekdayFormat : dateFormat).format(date);
 }
 
+/** "Today" when a day change is from today's session, otherwise that session's date, such as "Fri, Oct 9". */
+export function sessionLabel(session: IsoDate | null | undefined, today: IsoDate | null | undefined): string {
+  return !session || !today || session === today ? 'Today' : formatDate(session, 'weekday');
+}
+
 export function formatDateTime(timestamp: string | null | undefined): string {
   return timestamp ? dateTimeFormat.format(new Date(timestamp)) : '—';
 }

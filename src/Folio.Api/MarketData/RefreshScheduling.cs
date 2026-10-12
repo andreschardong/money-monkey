@@ -56,8 +56,9 @@ public sealed class RefreshCoordinator(IServiceScopeFactory scopes, IHostApplica
 }
 
 /// <summary>
-/// Refreshes quotes once each weekday after the close. The PC may be off at that time, so a refresh that was
-/// missed runs as soon as the app is up again.
+/// Refreshes quotes once each weekday after the close, and every few minutes while markets are open so "Today" is
+/// today's move (the evening run then stores the final closes). The PC may be off at the evening time, so a refresh
+/// that was missed runs as soon as the app is up again.
 /// </summary>
 public sealed class DailyRefreshWorker(
     RefreshCoordinator coordinator,
@@ -84,6 +85,8 @@ public sealed class DailyRefreshWorker(
                 {
                     if (await IsDueAsync(stoppingToken))
                         await coordinator.RunAsync("Scheduled", stoppingToken);
+                    else if (await IsIntradayDueAsync(stoppingToken))
+                        await coordinator.RunAsync("Intraday", stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -95,6 +98,18 @@ public sealed class DailyRefreshWorker(
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
+    }
+
+    private async Task<bool> IsIntradayDueAsync(CancellationToken ct)
+    {
+        var minutes = options.Value.IntradayRefreshMinutes;
+        if (minutes <= 0 || !clock.IsTradingHours())
+            return false;
+
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FolioDbContext>();
+        var lastAttempt = await db.RefreshRuns.MaxAsync(r => (DateTimeOffset?)r.StartedAt, ct);
+        return lastAttempt is null || clock.UtcNow - lastAttempt >= TimeSpan.FromMinutes(minutes);
     }
 
     private async Task<bool> IsDueAsync(CancellationToken ct)

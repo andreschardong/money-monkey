@@ -35,7 +35,7 @@
 
     <dl class="facts">
       <div>
-        <dt>Today</dt>
+        <dt>{{ dayLabel(o.dayChangeDate) }}</dt>
         <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
       </div>
       <div>
@@ -82,7 +82,7 @@
         <tr>
           <th appSort="name" [sort]="portfolioSort">Portfolio</th>
           <th class="right" appSort="value" [sort]="portfolioSort" defaultDirection="desc">Value</th>
-          <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">Today</th>
+          <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">{{ dayLabel(o.dayChangeDate) }}</th>
           <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
         </tr>
       </thead>

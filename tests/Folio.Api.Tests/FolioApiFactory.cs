@@ -94,6 +94,8 @@ public sealed class FakeQuoteProvider : IQuoteProvider
         ["SHOP.TO"] = new("SHOP.TO", "Shopify Inc.", "CAD", "TSX", AssetType.Stock),
         ["AAPL"] = new("AAPL", "Apple Inc.", "USD", "NASDAQ", AssetType.Stock),
         ["SPLT"] = new("SPLT", "Splitting Corp.", "USD", "NYSE", AssetType.Stock),
+        // Its exchange is closed on the last trading day: its newest close is the day before, which rose 10 %.
+        ["HOLI.TO"] = new("HOLI.TO", "Holiday Ltd.", "CAD", "TSX", AssetType.Stock),
     };
 
     public static decimal Close(string symbol, DateOnly date)
@@ -102,6 +104,7 @@ public sealed class FakeQuoteProvider : IQuoteProvider
         {
             "SHOP.TO" => 100m,
             "AAPL" => 200m,
+            "HOLI.TO" => date >= FolioApiFactory.Today.AddDays(-1) ? 55m : 50m,
             _ => date >= SplitDate ? 50m : 100m,
         };
         return date == FolioApiFactory.Today ? price * 1.01m : price;
@@ -121,7 +124,8 @@ public sealed class FakeQuoteProvider : IQuoteProvider
         var bars = new List<PricePoint>();
         for (var day = from; day <= to; day = day.AddDays(1))
         {
-            if (day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
+            var holiday = info.Symbol == "HOLI.TO" && day == FolioApiFactory.Today;
+            if (day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday) && !holiday)
                 bars.Add(new PricePoint(day, Close(symbol, day)));
         }
 

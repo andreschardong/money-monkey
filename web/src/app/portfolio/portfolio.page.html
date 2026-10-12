@@ -56,7 +56,7 @@
     <app-hero-figure [value]="d.summary.totalValue" [currency]="d.summary.baseCurrency" />
     <dl class="facts">
       <div>
-        <dt>Today</dt>
+        <dt>{{ dayLabel(d.summary.dayChangeDate) }}</dt>
         <dd><app-change [amount]="d.summary.dayChange" [percent]="d.summary.dayChangePercent" [currency]="d.summary.baseCurrency" /></dd>
       </div>
       <div>
