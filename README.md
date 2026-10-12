@@ -153,7 +153,9 @@ every download, goes to the server.
 
 The version number lives in `Directory.Build.props` (`<Version>`); bump it for a release. The API reports it at
 `/api/version` together with the commit and build time the image was built with, and the app shows it at the
-bottom of the navigation and on the Account page.
+bottom of the navigation and on the Account page. Images built by `deploy/azure/push-image.ps1` or CI carry the
+commit and build time; a plain `docker compose up --build` doesn't pass them, so the local app shows the version
+alone.
 
 The production build keeps critical-CSS inlining off (`inlineCritical: false` in `angular.json`): Angular's
 inliner loads the rest of the stylesheet through an inline `onload` handler, which the content security policy

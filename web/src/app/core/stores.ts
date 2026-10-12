@@ -37,7 +37,6 @@ export class MarketStatusStore {
 
 const DISPLAY_KEY = 'folio.displayCurrency';
 
-/** The currency the overview totals are shown in. */
 /** The running build's version, for the nav footer and the Account page. Anonymous, so it loads once for everyone. */
 @Injectable({ providedIn: 'root' })
 export class VersionStore {
@@ -45,6 +44,7 @@ export class VersionStore {
   readonly value = computed(() => (this.resource.hasValue() ? this.resource.value() : null));
 }
 
+/** The currency the overview totals are shown in. */
 @Injectable({ providedIn: 'root' })
 export class DisplayCurrency {
   readonly value = signal<Currency>(readDisplayCurrency());
