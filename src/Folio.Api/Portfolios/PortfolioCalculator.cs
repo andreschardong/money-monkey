@@ -23,6 +23,21 @@ public sealed class PortfolioCalculator(FolioDbContext db, MarketDataService mar
 
     public DateOnly Today => clock.Today;
 
+    private DateOnly? _session;
+    private bool _sessionLoaded;
+
+    /// <summary>The trading session day changes refer to; the same for every portfolio, so totals add up.</summary>
+    private async Task<DateOnly?> SessionAsync(CancellationToken ct)
+    {
+        if (!_sessionLoaded)
+        {
+            _session = await market.LatestSessionAsync(ct);
+            _sessionLoaded = true;
+        }
+
+        return _session;
+    }
+
     public async Task<PortfolioSnapshot> SnapshotAsync(Portfolio portfolio, CancellationToken ct)
     {
         var transactions = await LoadTransactionsAsync(portfolio.Id, ct);
@@ -33,7 +48,7 @@ public sealed class PortfolioCalculator(FolioDbContext db, MarketDataService mar
         var currencies = ledger.OpenPositions.Select(p => p.Currency).Concat(cash.Currencies).Distinct().ToList();
         await EnsureRatesAsync(currencies.Append(portfolio.BaseCurrency), today, ct);
         var fx = await LoadFxAsync(today, today, ct);
-        var valuation = PortfolioValuator.Value(ledger, today, prices, fx, cash);
+        var valuation = PortfolioValuator.Value(ledger, today, prices, fx, cash, await SessionAsync(ct));
         var securities = transactions
             .Where(t => t.Security is not null)
             .Select(t => t.Security!)

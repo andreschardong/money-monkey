@@ -52,6 +52,7 @@ public static class OverviewEndpoints
         decimal total = 0, dayChange = 0, totalReturn = 0, contributions = 0, cash = 0;
         var anyContributions = false;
         DateOnly? pricesAsOf = null;
+        DateOnly? dayChangeDate = null;
 
         var warnings = new List<string>();
         foreach (var snapshot in snapshots)
@@ -78,6 +79,8 @@ public static class OverviewEndpoints
             cash += ToDisplay(v.CashValue, baseCurrency);
             if (v.PricesAsOf > pricesAsOf || pricesAsOf is null)
                 pricesAsOf = v.PricesAsOf;
+            if (v.DayChangeDate > dayChangeDate || dayChangeDate is null)
+                dayChangeDate = v.DayChangeDate;
 
             foreach (var holding in v.Holdings)
             {
@@ -112,7 +115,8 @@ public static class OverviewEndpoints
             Slices(byCurrency, key => key),
             Slices(byType, Label),
             movers.Values.OrderByDescending(m => Math.Abs(m.DayChangePercent)).Take(6).ToList(),
-            warnings.Concat(missingRates.Select(c => $"No {c} to {display} exchange rate yet; {c} amounts are counted 1:1.")).ToList()));
+            warnings.Concat(missingRates.Select(c => $"No {c} to {display} exchange rate yet; {c} amounts are counted 1:1.")).ToList(),
+            dayChangeDate));
     }
 
     private static async Task<Results<Ok<HistoryDto>, ProblemHttpResult>> History(

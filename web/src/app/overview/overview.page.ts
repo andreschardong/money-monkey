@@ -1,13 +1,13 @@
 import { httpResource } from '@angular/common/http';
-import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
-import { FORMAT_PIPES } from '../core/format';
-import { History, Overview, PORTFOLIO_CURRENCIES, PortfolioSummary, Range } from '../core/models';
-import { DisplayCurrency, PortfolioList } from '../core/stores';
+import { FORMAT_PIPES, sessionLabel } from '../core/format';
+import { History, IsoDate, Overview, PORTFOLIO_CURRENCIES, PortfolioSummary, Range } from '../core/models';
+import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../core/stores';
 import { PortfolioDialog } from '../portfolio/portfolio-dialog';
 import { AllocationBar } from '../shared/allocation-bar';
 import { Change } from '../shared/change';
@@ -26,6 +26,7 @@ export class OverviewPage {
   private readonly router = inject(Router);
   private readonly list = inject(PortfolioList);
   protected readonly display = inject(DisplayCurrency);
+  private readonly marketStatus = inject(MarketStatusStore);
 
   protected readonly currencies = PORTFOLIO_CURRENCIES;
   protected readonly range = signal<Range>('1Y');
@@ -35,6 +36,20 @@ export class OverviewPage {
     () => `/api/overview/history?currency=${this.display.value()}&range=${this.range()}`);
 
   /** The last loaded value is kept while a new currency or range loads, so the page never blanks. */
+  /** Reload when a quote refresh finishes, so "Today" keeps up while the page stays open. */
+  private readonly reloadOnNewPrices = effect(() => {
+    if (this.marketStatus.pricesVersion() > 0) {
+      untracked(() => {
+        this.overviewResource.reload();
+        this.historyResource.reload();
+      });
+    }
+  });
+
+  protected dayLabel(session: IsoDate | null): string {
+    return sessionLabel(session, this.marketStatus.today());
+  }
+
   protected readonly overview = linkedSignal<Overview | undefined, Overview | undefined>({
     source: () => (this.overviewResource.hasValue() ? this.overviewResource.value() : undefined),
     computation: (next, previous) => next ?? previous?.value,

@@ -164,6 +164,20 @@ public sealed class MarketDataService(
     }
 
     /// <summary>Updates exchange rates and the closes of every traded security; the run is logged in the database.</summary>
+    /// <summary>
+    /// The latest trading session anywhere the app tracks: the newest quoted close up to today. During market hours
+    /// that is today (the intraday refresh stores the live price as today's close); before the open or at a weekend
+    /// it is the previous trading day.
+    /// </summary>
+    public Task<DateOnly?> LatestSessionAsync(CancellationToken ct)
+    {
+        var today = clock.Today;
+        var from = today.AddDays(-14);
+        return db.PriceBars.AsNoTracking()
+            .Where(b => b.Source != PriceSource.Manual && b.Date <= today && b.Date >= from)
+            .MaxAsync(b => (DateOnly?)b.Date, ct);
+    }
+
     public async Task<RefreshRun> RefreshAllAsync(string trigger, CancellationToken ct)
     {
         var run = new RefreshRun { StartedAt = clock.UtcNow, Trigger = trigger, Status = RefreshStatus.Running };

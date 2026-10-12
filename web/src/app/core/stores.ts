@@ -1,5 +1,5 @@
 import { httpResource } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Auth } from './auth';
 import { Currency, MarketStatus, PORTFOLIO_CURRENCIES, PortfolioSummary } from './models';
 
@@ -26,9 +26,39 @@ export class PortfolioList {
 @Injectable({ providedIn: 'root' })
 export class MarketStatusStore {
   private readonly auth = inject(Auth);
+  private readonly list = inject(PortfolioList);
+  private lastFinished = '';
 
   readonly resource = httpResource<MarketStatus>(
     () => (this.auth.signedIn() ? `/api/market/status?account=${encodeURIComponent(this.auth.email() ?? '')}` : undefined));
+
+  /** Today in the market's time zone, for labelling day changes. */
+  readonly today = computed(() => (this.resource.hasValue() ? this.resource.value().today : null));
+
+  /** Goes up each time a refresh finishes, so pages showing prices can reload. */
+  readonly pricesVersion = signal(0);
+
+  constructor() {
+    // Quotes refresh every 15 minutes while markets are open; look for a newer run while the page is in view.
+    setInterval(() => {
+      if (this.auth.signedIn() && document.visibilityState === 'visible') {
+        this.resource.reload();
+      }
+    }, 5 * 60 * 1000);
+
+    effect(() => {
+      const finished = this.resource.hasValue() ? this.resource.value().lastRun?.finishedAt ?? '' : '';
+      if (finished && this.lastFinished && finished !== this.lastFinished) {
+        untracked(() => {
+          this.pricesVersion.update(v => v + 1);
+          this.list.reload();
+        });
+      }
+      if (finished) {
+        this.lastFinished = finished;
+      }
+    });
+  }
 
   reload(): void {
     this.resource.reload();

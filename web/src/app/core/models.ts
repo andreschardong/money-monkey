@@ -46,6 +46,8 @@ export interface PortfolioSummary {
   access: PortfolioAccess;
   ownerEmail: string | null;
   sharedWith: number;
+  /** The trading session the day change is from; today once markets have opened. */
+  dayChangeDate: IsoDate | null;
 }
 
 export interface Holding {
@@ -342,6 +344,7 @@ export interface Overview {
   byAssetType: Allocation[];
   movers: Mover[];
   warnings: string[];
+  dayChangeDate: IsoDate | null;
 }
 
 export interface Problem {
@@ -425,6 +428,7 @@ export interface Assets {
   holdings: AssetHolding[];
   cash: AssetCash[];
   warnings: string[];
+  dayChangeDate: IsoDate | null;
 }
 
 export interface Share {
