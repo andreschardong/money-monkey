@@ -239,6 +239,18 @@ main {
   padding: 36px 48px 72px;
 }
 
+.version {
+  display: block;
+  padding: 6px 12px 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--ink);
+  }
+}
+
 @media (max-width: 959px) {
   main {
     padding: 20px 16px 56px;

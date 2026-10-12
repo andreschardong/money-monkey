@@ -151,6 +151,12 @@ every download, goes to the server.
 | Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `screens`, `mobile` (phone-size screenshots into `shots/` plus an overflow report), `pwa` (manifest, service worker, downloads bypass the cache) against the running container; `live` checks the deployed site anonymously; `icons` re-renders the app icons from `web/public/favicon.svg` (registration must be open: an empty `FOLIO_ALLOWED_EMAILS` while they run) |
 | Migrations | `dotnet ef migrations add <Name> --project src/Folio.Api --output-dir Data/Migrations` (applied on start-up) |
 
+The version number lives in `Directory.Build.props` (`<Version>`); bump it for a release. The API reports it at
+`/api/version` together with the commit and build time the image was built with, and the app shows it at the
+bottom of the navigation and on the Account page. Images built by `deploy/azure/push-image.ps1` or CI carry the
+commit and build time; a plain `docker compose up --build` doesn't pass them, so the local app shows the version
+alone.
+
 The production build keeps critical-CSS inlining off (`inlineCritical: false` in `angular.json`): Angular's
 inliner loads the rest of the stylesheet through an inline `onload` handler, which the content security policy
 blocks, and the page would lose most of its global styles.
