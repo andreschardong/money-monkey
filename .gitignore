@@ -501,3 +501,18 @@ backups/
 # Screenshot output of the browser checks
 tests/browser/shots/
 
+
+# Android app (android/)
+android/.gradle/
+android/.kotlin/
+android/.idea/
+android/build/
+android/app/build/
+android/local.properties
+android/captures/
+*.iml
+*.apk
+*.aab
+*.jks
+*.keystore
+
