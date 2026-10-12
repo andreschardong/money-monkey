@@ -61,6 +61,9 @@ public sealed class AuthOptions
     /// </summary>
     public string AllowedEmails { get; set; } = string.Empty;
 
+    /// <summary>Android app builds trusted for passkeys and sign-in links; see <see cref="AndroidApp"/>. Empty means none.</summary>
+    public string AndroidApps { get; set; } = string.Empty;
+
     public IReadOnlyList<string> AllowedEmailList =>
         AllowedEmails.Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
