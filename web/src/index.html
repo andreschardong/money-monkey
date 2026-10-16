@@ -20,9 +20,19 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- The first paint, before the app's own code has run: the page colour and a quiet spinner. Angular replaces it. -->
+    <style>
+      html { background: #f2f4f5; }
+      html[data-theme='dark'] { background: #0e1519; }
+      .boot { position: fixed; inset: 0; display: grid; place-items: center; }
+      .boot i { width: 36px; height: 36px; border: 3px solid rgb(27 95 156 / 20%); border-top-color: #1b5f9c; border-radius: 50%; animation: boot-spin 0.9s linear infinite; }
+      html[data-theme='dark'] .boot i { border-color: rgb(106 168 224 / 20%); border-top-color: #6aa8e0; }
+      @media (prefers-reduced-motion: reduce) { .boot i { animation-duration: 2.4s; } }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
-    <app-root></app-root>
+    <app-root><div class="boot" role="status" aria-label="Loading Money Monkey"><i></i></div></app-root>
     <noscript>Please enable JavaScript to continue using this application.</noscript>
   </body>
 </html>

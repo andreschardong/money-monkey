@@ -5,11 +5,13 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES, sessionLabel } from '../core/format';
 import { History, IsoDate, Overview, PORTFOLIO_CURRENCIES, PortfolioSummary, Range } from '../core/models';
 import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../core/stores';
 import { PortfolioDialog } from '../portfolio/portfolio-dialog';
 import { AllocationBar } from '../shared/allocation-bar';
+import { Busy } from '../shared/busy';
 import { Change } from '../shared/change';
 import { HeroFigure } from '../shared/hero-figure';
 import { SortHeader, TableSort } from '../shared/table-sort';
@@ -17,7 +19,9 @@ import { ValueChart } from '../shared/value-chart';
 
 @Component({
   selector: 'app-overview-page',
-  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, Change, HeroFigure, ValueChart, AllocationBar, SortHeader, ...FORMAT_PIPES],
+  imports: [
+    RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, Busy, Change, HeroFigure, ValueChart, AllocationBar, SortHeader, ...FORMAT_PIPES,
+  ],
   templateUrl: './overview.page.html',
   styleUrl: './overview.page.scss',
 })
@@ -26,6 +30,7 @@ export class OverviewPage {
   private readonly router = inject(Router);
   private readonly list = inject(PortfolioList);
   protected readonly display = inject(DisplayCurrency);
+  protected readonly auth = inject(Auth);
   private readonly marketStatus = inject(MarketStatusStore);
 
   protected readonly currencies = PORTFOLIO_CURRENCIES;

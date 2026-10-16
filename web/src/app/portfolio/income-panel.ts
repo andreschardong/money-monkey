@@ -1,5 +1,6 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { RealizedReport } from '../core/models';
 import { SortHeader, TableSort } from '../shared/table-sort';
@@ -13,9 +14,11 @@ import { SortHeader, TableSort } from '../shared/table-sort';
       <p class="empty muted">Sales, dividends and interest will be summarized here by year.</p>
     } @else {
       <h3>By year</h3>
-      <p class="caption">
-        Gains use the adjusted cost base (average cost) in {{ report().currency }}, converted at each trade's exchange rate.
-      </p>
+      @if (auth.showGains()) {
+        <p class="caption">
+          Gains use the adjusted cost base (average cost) in {{ report().currency }}, converted at each trade's exchange rate.
+        </p>
+      }
       <div class="scroll">
         <table class="data">
           <thead>
@@ -23,7 +26,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
               <th appSort="year" [sort]="yearSort" defaultDirection="desc">Year</th>
               <th class="right hide-s" appSort="proceeds" [sort]="yearSort" defaultDirection="desc">Proceeds</th>
               <th class="right hide-s" appSort="costBasis" [sort]="yearSort" defaultDirection="desc">Book value sold</th>
-              <th class="right" appSort="gain" [sort]="yearSort" defaultDirection="desc">Realized gain</th>
+              @if (auth.showGains()) {
+                <th class="right" appSort="gain" [sort]="yearSort" defaultDirection="desc">Realized gain</th>
+              }
               <th class="right" appSort="dividends" [sort]="yearSort" defaultDirection="desc">Dividends</th>
               <th class="right hide-s" appSort="interest" [sort]="yearSort" defaultDirection="desc">Interest</th>
               <th class="right hide-s" appSort="taxWithheld" [sort]="yearSort" defaultDirection="desc">Tax withheld</th>
@@ -35,7 +40,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                 <td class="num year">{{ y.year }}</td>
                 <td class="right num hide-s">{{ y.proceeds | money: report().currency }}</td>
                 <td class="right num hide-s">{{ y.costBasis | money: report().currency }}</td>
-                <td class="right num" [class.gain]="y.gain > 0" [class.loss]="y.gain < 0">{{ y.gain | money: report().currency : true }}</td>
+                @if (auth.showGains()) {
+                  <td class="right num" [class.gain]="y.gain > 0" [class.loss]="y.gain < 0">{{ y.gain | money: report().currency : true }}</td>
+                }
                 <td class="right num">{{ y.dividends | money: report().currency }}</td>
                 <td class="right num hide-s">{{ y.interest | money: report().currency }}</td>
                 <td class="right num hide-s">{{ y.taxWithheld | money: report().currency }}</td>
@@ -56,7 +63,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                 <th class="right hide-s" appSort="quantity" [sort]="salesSort" defaultDirection="desc">Shares</th>
                 <th class="right" appSort="proceeds" [sort]="salesSort" defaultDirection="desc">Proceeds</th>
                 <th class="right hide-s" appSort="costBasis" [sort]="salesSort" defaultDirection="desc">Book value</th>
-                <th class="right" appSort="gain" [sort]="salesSort" defaultDirection="desc">Gain</th>
+                @if (auth.showGains()) {
+                  <th class="right" appSort="gain" [sort]="salesSort" defaultDirection="desc">Gain</th>
+                }
               </tr>
             </thead>
             <tbody>
@@ -67,7 +76,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                   <td class="right num hide-s">{{ s.quantity | qty }}</td>
                   <td class="right num">{{ s.proceeds | money: report().currency }}</td>
                   <td class="right num hide-s">{{ s.costBasis | money: report().currency }}</td>
-                  <td class="right num" [class.gain]="s.gain > 0" [class.loss]="s.gain < 0">{{ s.gain | money: report().currency : true }}</td>
+                  @if (auth.showGains()) {
+                    <td class="right num" [class.gain]="s.gain > 0" [class.loss]="s.gain < 0">{{ s.gain | money: report().currency : true }}</td>
+                  }
                 </tr>
               }
             </tbody>
@@ -90,6 +101,7 @@ import { SortHeader, TableSort } from '../shared/table-sort';
 export class IncomePanel {
   readonly report = input.required<RealizedReport>();
 
+  protected readonly auth = inject(Auth);
   protected readonly yearSort = new TableSort({ key: 'year', direction: 'desc' });
   protected readonly years = computed(() => this.yearSort.apply(this.report().years, {
     year: y => y.year, proceeds: y => y.proceeds, costBasis: y => y.costBasis, gain: y => y.gain,

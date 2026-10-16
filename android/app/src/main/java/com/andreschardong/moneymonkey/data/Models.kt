@@ -12,6 +12,7 @@ data class Me(
     val passkeys: Int = 0,
     val inboxUrl: String? = null,
     val publicUrl: String = "",
+    val hideGains: Boolean = false,
 )
 
 @Serializable

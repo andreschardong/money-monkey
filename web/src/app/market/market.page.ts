@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { Api, problemMessage } from '../core/api';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES, formatRate } from '../core/format';
 import { FxRates, RefreshStatus, Security } from '../core/models';
 import { MarketStatusStore, PortfolioList } from '../core/stores';
@@ -28,6 +29,7 @@ const STATUS_TEXT: Record<RefreshStatus, string> = {
   styleUrl: './market.page.scss',
 })
 export class MarketPage {
+  protected readonly auth = inject(Auth);
   private readonly api = inject(Api);
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);

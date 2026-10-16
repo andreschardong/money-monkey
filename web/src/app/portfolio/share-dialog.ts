@@ -8,6 +8,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Api, problemMessage } from '../core/api';
 import { Share } from '../core/models';
+import { Busy } from '../shared/busy';
 
 export interface ShareDialogData {
   portfolioId: string;
@@ -20,7 +21,7 @@ export interface ShareDialogData {
  */
 @Component({
   selector: 'app-share-dialog',
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, MatIcon],
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule, MatIcon, Busy],
   template: `
     <h2 mat-dialog-title>Share {{ data.name }}</h2>
     <mat-dialog-content>
@@ -46,7 +47,7 @@ export interface ShareDialogData {
           </ul>
         }
       } @else {
-        <p class="muted">Loading…</p>
+        <app-busy label="Loading…" inline />
       }
 
       <form class="add" (ngSubmit)="add()" novalidate>
