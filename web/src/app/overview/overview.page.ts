@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
 import { Auth } from '../core/auth';
+import { countryName } from '../core/countries';
 import { FORMAT_PIPES, sessionLabel } from '../core/format';
 import { History, IsoDate, Overview, PORTFOLIO_CURRENCIES, PortfolioSummary, Range } from '../core/models';
 import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../core/stores';
@@ -63,6 +64,12 @@ export class OverviewPage {
     source: () => (this.historyResource.hasValue() ? this.historyResource.value() : undefined),
     computation: (next, previous) => next ?? previous?.value,
   });
+
+  protected readonly countryName = countryName;
+  /** Country slices with their names; the server sends codes so the two never disagree on wording. */
+  protected readonly byCountry = computed(() =>
+    (this.overview()?.byCountry ?? []).map(a => ({ ...a, label: a.key ? countryName(a.key) : a.label })));
+  protected readonly hasCountries = computed(() => this.byCountry().some(a => a.key !== ''));
 
   /** Creation order until a column is clicked. */
   protected readonly portfolioSort = new TableSort();

@@ -304,6 +304,11 @@ namespace Folio.Api.Data.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("base_currency");
 
+                    b.Property<string>("Country")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");

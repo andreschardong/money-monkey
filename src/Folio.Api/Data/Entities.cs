@@ -15,6 +15,10 @@ public sealed class Portfolio
     public required string BaseCurrency { get; set; }
 
     public string? Description { get; set; }
+
+    /// <summary>Where the account is held, as an ISO 3166-1 alpha-2 code (CA, US, BR); the overview sums by it.</summary>
+    public string? Country { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public List<Transaction> Transactions { get; set; } = [];

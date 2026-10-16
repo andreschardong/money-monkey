@@ -98,6 +98,9 @@
               <span class="currency-code">{{ p.baseCurrency }}</span>
               <div class="muted small">
                 {{ p.holdingsCount }} {{ p.holdingsCount === 1 ? 'holding' : 'holdings' }}
+                @if (p.country) {
+                  · {{ countryName(p.country) }}
+                }
                 @if (p.access !== 'Owner') {
                   · shared by {{ p.ownerEmail }}
                 }
@@ -144,6 +147,16 @@
         <app-allocation-bar [items]="o.byAssetType" [currency]="o.currency" colourBy="assetType" />
       } @else {
         <p class="muted">Nothing invested yet.</p>
+      }
+    </section>
+
+    <section class="panel">
+      <h2>By country</h2>
+      <p class="caption">Where your accounts are held, each portfolio counted whole.</p>
+      @if (hasCountries()) {
+        <app-allocation-bar [items]="byCountry()" [currency]="o.currency" colourBy="country" />
+      } @else {
+        <p class="muted">Give a portfolio a country (Edit portfolio) to see the split.</p>
       }
     </section>
   </div>

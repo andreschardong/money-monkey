@@ -24,6 +24,11 @@
   color: var(--ink-2);
 }
 
+.country {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+
 // Phones: tab labels without counts, so all three fit without paging arrows.
 @media (max-width: 599px) {
   .count,

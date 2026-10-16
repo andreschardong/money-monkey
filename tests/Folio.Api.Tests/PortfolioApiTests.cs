@@ -312,6 +312,44 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
         Assert.Contains("SHOP.TO", status.LastRun.Log);
     }
 
+    [Fact]
+    public async Task A_portfolio_may_belong_to_a_country_and_the_overview_sums_by_country()
+    {
+        var created = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("TFSA", "CAD", null, " ca "), Json, Ct);
+        created.EnsureSuccessStatusCode();
+        var tfsa = (await created.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!;
+        Assert.Equal("CA", tfsa.Country);
+        var rrsp = await CreatePortfolioAsync("CAD");
+        var usa = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("Brokerage", "USD", null, "US"), Json, Ct);
+        usa.EnsureSuccessStatusCode();
+        var brokerage = (await usa.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!.Id;
+        await SetCashAsync(tfsa.Id, "CAD", 700m);
+        await SetCashAsync(rrsp, "CAD", 300m);
+        await SetCashAsync(brokerage, "USD", 500m);
+
+        // The RRSP gets its country afterwards, through an edit.
+        var renamed = await _client.PutAsJsonAsync($"/api/portfolios/{rrsp}", new UpdatePortfolioRequest("RRSP", "CAD", null, "CA"), Json, Ct);
+        renamed.EnsureSuccessStatusCode();
+        Assert.Equal("CA", (await renamed.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!.Country);
+
+        var overview = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        var byCountry = overview.ByCountry.ToDictionary(a => a.Key);
+        Assert.Equal(1_000m, byCountry["CA"].Value);
+        Assert.Equal(700m, byCountry["US"].Value); // US$500 at 1.40
+        Assert.Equal(1_000m / 1_700m, byCountry["CA"].Weight, 5);
+        Assert.Equal("CA", overview.Portfolios.Single(p => p.Id == rrsp).Country);
+        Assert.Equal("CA", (await GetAsync<ExportDto>("/api/export")).Portfolios.Single(p => p.Id == tfsa.Id).Country);
+
+        // A portfolio without a country is summed as "Not set"; a name instead of a code is refused.
+        var other = await CreatePortfolioAsync("CAD");
+        await SetCashAsync(other, "CAD", 50m);
+        overview = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        Assert.Equal(50m, overview.ByCountry.Single(a => a.Key == "").Value);
+        Assert.Equal("Not set", overview.ByCountry.Single(a => a.Key == "").Label);
+        var refused = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("Bad", "CAD", null, "Canada"), Json, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+    }
+
     private static DateOnly D(string iso) => DateOnly.Parse(iso, System.Globalization.CultureInfo.InvariantCulture);
 
     private async Task<Guid> CreatePortfolioAsync(string currency)

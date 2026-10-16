@@ -25,12 +25,12 @@ import {
 export class Api {
   private readonly http = inject(HttpClient);
 
-  createPortfolio(name: string, baseCurrency: Currency, description: string | null) {
-    return this.send(this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description }));
+  createPortfolio(name: string, baseCurrency: Currency, description: string | null, country: string | null) {
+    return this.send(this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description, country }));
   }
 
-  updatePortfolio(id: string, name: string, baseCurrency: Currency, description: string | null) {
-    return this.send(this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description }));
+  updatePortfolio(id: string, name: string, baseCurrency: Currency, description: string | null, country: string | null) {
+    return this.send(this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description, country }));
   }
 
   deletePortfolio(id: string) {
