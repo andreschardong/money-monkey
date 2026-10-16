@@ -10,6 +10,7 @@
     "sharing": "node sharing.mjs http://localhost:8090 http://localhost:8025",
     "mobile": "node mobile.mjs http://localhost:8090 shots http://localhost:8025",
     "pwa": "node pwa-check.mjs http://localhost:8090 http://localhost:8025",
+    "charts": "node chart-check.mjs http://localhost:8090 http://localhost:8025",
     "icons": "node make-icons.mjs",
     "live": "node live-check.mjs https://moneymonkey.example.com shots",
     "readme-shots": "node readme-shots.mjs http://localhost:8090 http://localhost:8025"
