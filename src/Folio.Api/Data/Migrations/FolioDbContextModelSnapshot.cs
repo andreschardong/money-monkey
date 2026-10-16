@@ -17,7 +17,7 @@ namespace Folio.Api.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -49,6 +49,10 @@ namespace Folio.Api.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
+
+                    b.Property<bool>("HideGains")
+                        .HasColumnType("boolean")
+                        .HasColumnName("hide_gains");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")

@@ -171,6 +171,28 @@ public class AuthApiTests(FolioApiFactory factory) : IClassFixture<FolioApiFacto
     }
 
     [Fact]
+    public async Task Hiding_gains_is_saved_on_the_account_so_every_device_agrees()
+    {
+        var email = $"prefs-{Guid.NewGuid():N}@example.com";
+        using var laptop = await factory.CreateSignedInClientAsync(email);
+        Assert.False((await laptop.GetFromJsonAsync<MeDto>("/api/auth/me", Json, Ct))!.HideGains);
+
+        var saved = await laptop.PutAsJsonAsync("/api/account/preferences", new PreferencesRequest(true), Json, Ct);
+        saved.EnsureSuccessStatusCode();
+        Assert.True((await saved.Content.ReadFromJsonAsync<MeDto>(Json, Ct))!.HideGains);
+
+        // Another device signing in to the same account sees the choice, and may change it back.
+        using var phone = await factory.CreateSignedInClientAsync(email);
+        Assert.True((await phone.GetFromJsonAsync<MeDto>("/api/auth/me", Json, Ct))!.HideGains);
+        (await phone.PutAsJsonAsync("/api/account/preferences", new PreferencesRequest(false), Json, Ct)).EnsureSuccessStatusCode();
+        Assert.False((await laptop.GetFromJsonAsync<MeDto>("/api/auth/me", Json, Ct))!.HideGains);
+
+        using var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anonymous.PutAsJsonAsync("/api/account/preferences", new PreferencesRequest(true), Json, Ct)).StatusCode);
+    }
+
+    [Fact]
     public async Task Transactions_and_suggestions_of_another_account_are_out_of_reach()
     {
         using var alice = await factory.CreateSignedInClientAsync();

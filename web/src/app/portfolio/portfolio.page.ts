@@ -9,9 +9,11 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Api, problemMessage } from '../core/api';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES, formatDate, formatMoney, formatQuantity, sessionLabel } from '../core/format';
 import { History, IsoDate, PortfolioDetail, Range, RealizedReport, Suggestion, Transaction } from '../core/models';
 import { MarketStatusStore, PortfolioList } from '../core/stores';
+import { Busy } from '../shared/busy';
 import { Change } from '../shared/change';
 import { confirm } from '../shared/confirm-dialog';
 import { HeroFigure } from '../shared/hero-figure';
@@ -28,7 +30,7 @@ import { TransactionsTable } from './transactions-table';
 @Component({
   selector: 'app-portfolio-page',
   imports: [
-    MatButtonModule, MatIcon, MatMenuModule, MatTabsModule, Change, HeroFigure, ValueChart, HoldingsTable,
+    MatButtonModule, MatIcon, MatMenuModule, MatTabsModule, Busy, Change, HeroFigure, ValueChart, HoldingsTable,
     TransactionsTable, IncomePanel, ...FORMAT_PIPES,
   ],
   templateUrl: './portfolio.page.html',
@@ -44,6 +46,7 @@ export class PortfolioPage {
   private readonly list = inject(PortfolioList);
   private readonly market = inject(MarketStatusStore);
   private readonly commands = inject(TransactionCommands);
+  protected readonly auth = inject(Auth);
 
   readonly id = input.required<string>();
   protected readonly range = signal<Range>('1Y');
