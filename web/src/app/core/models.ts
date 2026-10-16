@@ -30,6 +30,8 @@ export interface PortfolioSummary {
   name: string;
   baseCurrency: Currency;
   description: string | null;
+  /** ISO 3166-1 alpha-2 (CA, US, BR), or null; see core/countries.ts. */
+  country: string | null;
   totalValue: number;
   holdingsValue: number;
   cashValue: number;
@@ -311,6 +313,7 @@ export interface OverviewPortfolio {
   holdingsCount: number;
   access: PortfolioAccess;
   ownerEmail: string | null;
+  country: string | null;
 }
 
 export interface Allocation {
@@ -342,6 +345,8 @@ export interface Overview {
   portfolios: OverviewPortfolio[];
   byCurrency: Allocation[];
   byAssetType: Allocation[];
+  /** Keyed by country code; the key is empty for portfolios without one. */
+  byCountry: Allocation[];
   movers: Mover[];
   warnings: string[];
   dayChangeDate: IsoDate | null;

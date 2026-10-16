@@ -16,6 +16,9 @@
       @if (d.summary.description) {
         <p class="description">{{ d.summary.description }}</p>
       }
+      @if (d.summary.country) {
+        <p class="country muted" data-testid="country">{{ countryName(d.summary.country) }}</p>
+      }
       @if (d.summary.access !== 'Owner') {
         <p class="access" data-testid="access">
           <mat-icon svgIcon="group" aria-hidden="true" />

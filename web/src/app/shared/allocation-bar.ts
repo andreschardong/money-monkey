@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { FORMAT_PIPES, formatPercent } from '../core/format';
 import { Allocation, Currency } from '../core/models';
 import { Theme } from '../core/theme';
-import { assetTypeColour, chartTheme, currencyColour } from './chart-theme';
+import { assetTypeColour, chartTheme, currencyColour, slotColour } from './chart-theme';
 
 /** Part-to-whole as one stacked bar; the legend below doubles as the table view. */
 @Component({
@@ -62,14 +62,19 @@ import { assetTypeColour, chartTheme, currencyColour } from './chart-theme';
 export class AllocationBar {
   readonly items = input.required<Allocation[]>();
   readonly currency = input.required<Currency>();
-  readonly colourBy = input<'currency' | 'assetType'>('currency');
+  readonly colourBy = input<'currency' | 'assetType' | 'country'>('currency');
 
   private readonly theme = inject(Theme);
 
   protected readonly slices = computed(() => {
     const theme = chartTheme(this.theme.isDark());
-    const pick = this.colourBy() === 'currency' ? currencyColour : assetTypeColour;
-    return this.items().map(item => ({ ...item, colour: pick(theme, item.key) }));
+    const by = this.colourBy();
+    let named = 0;
+    return this.items().map(item => ({
+      ...item,
+      colour: by === 'country' ? slotColour(theme, item.key === '' ? 0 : named++, item.key)
+        : by === 'currency' ? currencyColour(theme, item.key) : assetTypeColour(theme, item.key),
+    }));
   });
 
   protected readonly summary = computed(() =>

@@ -62,6 +62,11 @@ export function currencyColour(theme: ChartTheme, currency: Currency): string {
   return slot === undefined ? theme.other : theme.series[slot];
 }
 
+/** Categories with no fixed slot, such as countries, take the palette in order; an empty key ("not set") is grey. */
+export function slotColour(theme: ChartTheme, slot: number, key: string): string {
+  return key === '' ? theme.other : theme.series[slot % theme.series.length];
+}
+
 const ASSET_SLOTS: Record<string, number> = { Stock: 0, Etf: 1, Fund: 2, Crypto: 3 };
 
 export function assetTypeColour(theme: ChartTheme, key: string): string {

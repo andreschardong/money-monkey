@@ -48,6 +48,7 @@ public static class OverviewEndpoints
         var portfolios = new List<OverviewPortfolioDto>();
         var byCurrency = new Dictionary<string, decimal>();
         var byType = new Dictionary<string, decimal>();
+        var byCountry = new Dictionary<string, decimal>();
         var movers = new Dictionary<Guid, MoverDto>();
         decimal total = 0, dayChange = 0, totalReturn = 0, contributions = 0, cash = 0;
         var anyContributions = false;
@@ -69,9 +70,11 @@ public static class OverviewEndpoints
             portfolios.Add(new OverviewPortfolioDto(portfolio.Id, portfolio.Name, baseCurrency, Money(v.TotalValue),
                 Money(value), Money(ToDisplay(v.DayChange, baseCurrency)), Ratio(v.DayChangePercent),
                 earned is { } e ? Money(e) : null, earned is { } r && deposits > 0 ? Ratio(r / deposits) : null, v.Holdings.Count,
-                snapshot.Access.Access, snapshot.Access.OwnerEmail));
+                snapshot.Access.Access, snapshot.Access.OwnerEmail, portfolio.Country));
 
             total += value;
+            // A portfolio's whole value counts for its country; those without one are shown together as "Not set".
+            Add(byCountry, portfolio.Country ?? string.Empty, value);
             dayChange += ToDisplay(v.DayChange, baseCurrency);
             totalReturn += earned ?? 0m;
             anyContributions |= earned is not null;
@@ -114,6 +117,7 @@ public static class OverviewEndpoints
             portfolios,
             Slices(byCurrency, key => key),
             Slices(byType, Label),
+            Slices(byCountry, key => key.Length == 0 ? "Not set" : key),
             movers.Values.OrderByDescending(m => Math.Abs(m.DayChangePercent)).Take(6).ToList(),
             warnings.Concat(missingRates.Select(c => $"No {c} to {display} exchange rate yet; {c} amounts are counted 1:1.")).ToList(),
             dayChangeDate));
