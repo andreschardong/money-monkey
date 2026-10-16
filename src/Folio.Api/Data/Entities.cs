@@ -2,6 +2,15 @@ using Folio.Core;
 
 namespace Folio.Api.Data;
 
+/// <summary>What kind of account a portfolio is; the overview can leave real estate out of the picture.</summary>
+public enum PortfolioKind
+{
+    Investment,
+
+    /// <summary>A property, valued through a manually priced holding.</summary>
+    RealEstate,
+}
+
 public sealed class Portfolio
 {
     public Guid Id { get; set; }
@@ -18,6 +27,9 @@ public sealed class Portfolio
 
     /// <summary>Where the account is held, as an ISO 3166-1 alpha-2 code (CA, US, BR); the overview sums by it.</summary>
     public string? Country { get; set; }
+
+    /// <summary>Investment account (the default) or real estate.</summary>
+    public PortfolioKind Kind { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

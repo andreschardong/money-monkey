@@ -67,7 +67,8 @@ export function slotColour(theme: ChartTheme, slot: number, key: string): string
   return key === '' ? theme.other : theme.series[slot % theme.series.length];
 }
 
-const ASSET_SLOTS: Record<string, number> = { Stock: 0, Etf: 1, Fund: 2, Crypto: 3 };
+// Real estate shares the last slot with crypto: both are rare, and rarer together.
+const ASSET_SLOTS: Record<string, number> = { Stock: 0, Etf: 1, Fund: 2, Crypto: 3, RealEstate: 3 };
 
 export function assetTypeColour(theme: ChartTheme, key: string): string {
   if (key === 'Cash') {

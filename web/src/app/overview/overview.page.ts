@@ -4,12 +4,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { Router, RouterLink } from '@angular/router';
 import { Auth } from '../core/auth';
 import { countryName } from '../core/countries';
 import { FORMAT_PIPES, sessionLabel } from '../core/format';
 import { History, IsoDate, Overview, PORTFOLIO_CURRENCIES, PortfolioSummary, Range } from '../core/models';
-import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../core/stores';
+import { DisplayCurrency, MarketStatusStore, PortfolioList, RealEstateFilter } from '../core/stores';
 import { PortfolioDialog } from '../portfolio/portfolio-dialog';
 import { AllocationBar } from '../shared/allocation-bar';
 import { Busy } from '../shared/busy';
@@ -21,7 +22,8 @@ import { ValueChart } from '../shared/value-chart';
 @Component({
   selector: 'app-overview-page',
   imports: [
-    RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, Busy, Change, HeroFigure, ValueChart, AllocationBar, SortHeader, ...FORMAT_PIPES,
+    RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, MatSlideToggle, Busy, Change, HeroFigure, ValueChart, AllocationBar, SortHeader,
+    ...FORMAT_PIPES,
   ],
   templateUrl: './overview.page.html',
   styleUrl: './overview.page.scss',
@@ -31,15 +33,20 @@ export class OverviewPage {
   private readonly router = inject(Router);
   private readonly list = inject(PortfolioList);
   protected readonly display = inject(DisplayCurrency);
+  protected readonly realEstate = inject(RealEstateFilter);
   protected readonly auth = inject(Auth);
   private readonly marketStatus = inject(MarketStatusStore);
 
   protected readonly currencies = PORTFOLIO_CURRENCIES;
   protected readonly range = signal<Range>('1Y');
 
-  private readonly overviewResource = httpResource<Overview>(() => `/api/overview?currency=${this.display.value()}`);
+  /** The switch to leave real estate out only appears once there is a real-estate portfolio to leave out. */
+  protected readonly hasRealEstate = computed(() => this.list.resource.value().some(p => p.kind === 'RealEstate'));
+  private readonly filter = computed(() => (this.realEstate.include() ? '' : '&excludeRealEstate=true'));
+
+  private readonly overviewResource = httpResource<Overview>(() => `/api/overview?currency=${this.display.value()}${this.filter()}`);
   private readonly historyResource = httpResource<History>(
-    () => `/api/overview/history?currency=${this.display.value()}&range=${this.range()}`);
+    () => `/api/overview/history?currency=${this.display.value()}&range=${this.range()}${this.filter()}`);
 
   /** The last loaded value is kept while a new currency or range loads, so the page never blanks. */
   /** Reload when a quote refresh finishes, so "Today" keeps up while the page stays open. */

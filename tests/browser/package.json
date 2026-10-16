@@ -13,6 +13,7 @@
     "charts": "node chart-check.mjs http://localhost:8090 http://localhost:8025",
     "gains": "node gains-check.mjs http://localhost:8090 http://localhost:8025",
     "country": "node country-check.mjs http://localhost:8090 http://localhost:8025",
+    "realestate": "node realestate-check.mjs http://localhost:8090 http://localhost:8025",
     "icons": "node make-icons.mjs",
     "live": "node live-check.mjs https://moneymonkey.example.com shots",
     "readme-shots": "node readme-shots.mjs http://localhost:8090 http://localhost:8025"

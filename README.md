@@ -61,6 +61,9 @@ The screenshots show demo data; `tests/browser/readme-shots.mjs` regenerates the
   values and prices only. The choice is saved on the account and follows you to every device.
 - **A country per portfolio.** Each portfolio can say where the account is held; the overview then sums your money
   by country, next to the splits by currency and by type.
+- **Real estate on the side.** A portfolio can be marked as real estate: a property you own, valued through a manually
+  priced holding. The overview counts it by default and has a switch to leave it out, so net worth reads with or
+  without property; By type shows it as its own slice.
 
 ## Run it
 
@@ -152,7 +155,7 @@ every download, goes to the server.
 | API | `dotnet run --project src/Folio.Api` on <http://localhost:5080>; API explorer at `/scalar` |
 | Web | `cd web; npm install; npx ng serve` on <http://localhost:4200> (proxies `/api` to the API) |
 | Tests | `dotnet test` (the API tests start PostgreSQL in Docker) and `cd web; npx ng test --watch=false` |
-| Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `screens`, `mobile` (phone-size screenshots into `shots/` plus an overflow report), `pwa` (manifest, service worker, downloads bypass the cache), `charts` (axes fit the data), `gains` (the Account page switch hides every gain and change figure; the loading spinners), `country` (a portfolio's country and the overview's split by country) against the running container; `live` checks the deployed site anonymously; `icons` re-renders the app icons from `web/public/favicon.svg` (registration must be open: an empty `FOLIO_ALLOWED_EMAILS` while they run) |
+| Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `screens`, `mobile` (phone-size screenshots into `shots/` plus an overflow report), `pwa` (manifest, service worker, downloads bypass the cache), `charts` (axes fit the data), `gains` (the Account page switch hides every gain and change figure; the loading spinners), `country` (a portfolio's country and the overview's split by country), `realestate` (a real-estate portfolio and the overview switch that leaves it out) against the running container; `live` checks the deployed site anonymously; `icons` re-renders the app icons from `web/public/favicon.svg` (registration must be open: an empty `FOLIO_ALLOWED_EMAILS` while they run) |
 | Migrations | `dotnet ef migrations add <Name> --project src/Folio.Api --output-dir Data/Migrations` (applied on start-up) |
 
 The version number lives in `Directory.Build.props` (`<Version>`); bump it for a release. The API reports it at

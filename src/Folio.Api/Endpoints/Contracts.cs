@@ -4,9 +4,12 @@ using Folio.Core;
 namespace Folio.Api.Endpoints;
 
 /// <param name="Country">ISO 3166-1 alpha-2, such as CA or US; null for none.</param>
-public sealed record CreatePortfolioRequest(string Name, string BaseCurrency, string? Description, string? Country = null);
+/// <param name="Kind">Investment (the default) or RealEstate.</param>
+public sealed record CreatePortfolioRequest(
+    string Name, string BaseCurrency, string? Description, string? Country = null, PortfolioKind Kind = PortfolioKind.Investment);
 
-public sealed record UpdatePortfolioRequest(string Name, string BaseCurrency, string? Description, string? Country = null);
+public sealed record UpdatePortfolioRequest(
+    string Name, string BaseCurrency, string? Description, string? Country = null, PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record PortfolioSummaryDto(
     Guid Id,
@@ -30,7 +33,8 @@ public sealed record PortfolioSummaryDto(
     string? OwnerEmail,
     int SharedWith,
     DateOnly? DayChangeDate,
-    string? Country = null);
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record PortfolioDetailDto(
     PortfolioSummaryDto Summary,
@@ -212,7 +216,8 @@ public sealed record ExportPortfolioDto(
     DateTimeOffset CreatedAt,
     IReadOnlyList<ExportTransactionDto> Transactions,
     IReadOnlyList<CashEntryDto> CashBalances,
-    string? Country = null);
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 /// <summary>Everything the account entered; what a restore or another tool would need.</summary>
 public sealed record ExportDto(DateTimeOffset ExportedAt, IReadOnlyList<ExportPortfolioDto> Portfolios);
@@ -268,7 +273,8 @@ public sealed record OverviewPortfolioDto(
     int HoldingsCount,
     string Access,
     string? OwnerEmail,
-    string? Country = null);
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record AllocationDto(string Key, string Label, decimal Value, decimal Weight);
 

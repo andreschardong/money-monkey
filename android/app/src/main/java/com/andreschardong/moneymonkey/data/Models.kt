@@ -72,6 +72,7 @@ data class PortfolioSummary(
     val baseCurrency: String,
     val description: String? = null,
     val country: String? = null,
+    val kind: String = "Investment",
     val totalValue: Decimal,
     val holdingsValue: Decimal,
     val cashValue: Decimal,

@@ -60,6 +60,7 @@ public static class ImportEndpoints
                 BaseCurrency = Currencies.Normalize(source.BaseCurrency),
                 Description = string.IsNullOrWhiteSpace(source.Description) ? null : source.Description.Trim(),
                 Country = country,
+                Kind = Enum.IsDefined(source.Kind) ? source.Kind : PortfolioKind.Investment,
                 CreatedAt = now,
                 UpdatedAt = now,
             };
