@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { formatCompactMoney, formatDate, formatMoney, FORMAT_PIPES } from '../core/format';
+import { compactAxisFormatter, formatDate, formatMoney, FORMAT_PIPES } from '../core/format';
 import { Currency, HistoryPoint, Range } from '../core/models';
 import { Theme } from '../core/theme';
 import { chartTheme } from './chart-theme';
@@ -10,7 +10,11 @@ import { ChartOptions, EChart, reducedMotion } from './echart';
 
 export const RANGES: readonly Range[] = ['1M', '3M', '6M', 'YTD', '1Y', '3Y', 'ALL'];
 
-/** Portfolio value against net deposits: the gap between the two lines is what the money has earned. */
+/**
+ * Portfolio value against net deposits: the gap between the two lines is what the money has earned. Without any
+ * deposit or withdrawal recorded, the net-deposits line would be a flat zero that pins the axis to zero and flattens
+ * the value line, so it is left out until there is one.
+ */
 @Component({
   selector: 'app-value-chart',
   imports: [EChart, MatButtonModule, MatButtonToggleModule, SortHeader, ...FORMAT_PIPES],
@@ -41,6 +45,9 @@ export class ValueChart {
     return rows.reverse();
   });
 
+  /** A deposit, withdrawal or transfer has been recorded, so net deposits mean something. */
+  protected readonly hasContributions = computed(() => this.points().some(p => p.netContributions !== 0));
+
   protected readonly sort = new TableSort({ key: 'date', direction: 'desc' });
   protected readonly sortedRows = computed(() => this.sort.apply(this.rows(), {
     date: r => r.date, value: r => r.value, netContributions: r => r.netContributions, earned: r => r.value - r.netContributions,
@@ -50,7 +57,10 @@ export class ValueChart {
     const t = chartTheme(this.theme.isDark());
     const currency = this.currency();
     const points = this.points();
+    const withDeposits = this.hasContributions();
     const font = getComputedStyle(document.body).fontFamily;
+    const axisLabel = compactAxisFormatter(
+      withDeposits ? points.flatMap(p => [p.value, p.netContributions]) : points.map(p => p.value), currency);
 
     return {
       animation: !reducedMotion(),
@@ -78,8 +88,12 @@ export class ValueChart {
             `<span style="display:inline-block;width:14px;height:2px;background:${colour}"></span>` +
             `<strong style="font-variant-numeric:tabular-nums">${value}</strong>` +
             `<span style="color:${t.ink2}">${label}</span></div>`;
-          return `<div style="color:${t.ink2};font-size:12px">${formatDate(point.date, 'weekday')}</div>` +
-            row(t.series[0], formatMoney(point.value, currency), 'value') +
+          const head = `<div style="color:${t.ink2};font-size:12px">${formatDate(point.date, 'weekday')}</div>` +
+            row(t.series[0], formatMoney(point.value, currency), 'value');
+          if (!withDeposits) {
+            return head;
+          }
+          return head +
             row(t.series[1], formatMoney(point.netContributions, currency), 'net deposits') +
             `<div style="margin-top:6px;color:${gain >= 0 ? t.gain : t.loss};font-variant-numeric:tabular-nums">` +
             `${formatMoney(gain, currency, { signed: true })} earned</div>`;
@@ -98,13 +112,14 @@ export class ValueChart {
       },
       yAxis: {
         type: 'value',
+        // The axis fits the data rather than starting at zero, so a steady portfolio's moves stay visible.
         scale: true,
         splitNumber: 4,
-        axisLabel: { color: t.ink3, formatter: (value: number) => formatCompactMoney(value, currency) },
+        axisLabel: { color: t.ink3, formatter: axisLabel },
         splitLine: { lineStyle: { color: t.grid, width: 1, type: 'solid' } },
       },
       series: [
-        {
+        ...(withDeposits ? [{
           name: 'Net deposits',
           type: 'line',
           step: 'end',
@@ -115,7 +130,7 @@ export class ValueChart {
           itemStyle: { color: t.series[1], borderColor: t.surface, borderWidth: 2 },
           emphasis: { disabled: true },
           z: 2,
-        },
+        }] : []),
         {
           name: 'Value',
           type: 'line',
