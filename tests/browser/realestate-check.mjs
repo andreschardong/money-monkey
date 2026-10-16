@@ -31,10 +31,12 @@ const hero = page.locator('app-hero-figure .figure').first();
 const heroValue = async () => money(await hero.getAttribute('aria-label'));
 const typeRows = async () => (await page.locator('section.panel', { has: page.getByRole('heading', { name: 'By type' }) }).locator('.legend tr').allTextContents()).map(r => r.replace(/\s+/g, ' ').trim());
 
-// ------------------------------------------------------------------ no real estate yet: no switch
+// ------------------------------------------------------------------ the switch is there from the start, on
 await page.goto(`${base}/`);
 await page.getByRole('heading', { name: 'Net worth' }).waitFor();
-report(!(await page.getByRole('switch', { name: 'Include real estate' }).isVisible()), 'overview: no real-estate switch while there is nothing to leave out');
+const toggle = page.getByRole('switch', { name: 'Include real estate' });
+await toggle.waitFor();
+report((await toggle.getAttribute('aria-checked')) === 'true', 'overview: the real-estate switch is there before any portfolio is real estate, and on');
 
 // ------------------------------------------------------------------ a real-estate portfolio
 await page.getByRole('button', { name: 'New portfolio' }).click();
@@ -59,9 +61,8 @@ await json(await api.post(`${base}/api/portfolios/${apartmentId}/transactions`,
 // ------------------------------------------------------------------ the overview counts it, then leaves it out
 await page.goto(`${base}/`);
 await page.getByRole('heading', { name: 'Net worth' }).waitFor();
-const toggle = page.getByRole('switch', { name: 'Include real estate' });
 await toggle.waitFor();
-report((await toggle.getAttribute('aria-checked')) === 'true', 'overview: the switch appears, on by default');
+report((await toggle.getAttribute('aria-checked')) === 'true', 'overview: the switch is still on');
 const all = await json(await api.get(`${base}/api/overview?currency=CAD`));
 const liquid = await json(await api.get(`${base}/api/overview?currency=CAD&excludeRealEstate=true`));
 report(Math.abs(all.totalValue - liquid.totalValue - 500000) < 1, `API: the property is worth $500,000 of the total (${all.totalValue} vs ${liquid.totalValue})`);

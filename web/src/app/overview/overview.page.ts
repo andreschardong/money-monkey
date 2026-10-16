@@ -40,8 +40,7 @@ export class OverviewPage {
   protected readonly currencies = PORTFOLIO_CURRENCIES;
   protected readonly range = signal<Range>('1Y');
 
-  /** The switch to leave real estate out only appears once there is a real-estate portfolio to leave out. */
-  protected readonly hasRealEstate = computed(() => this.list.resource.value().some(p => p.kind === 'RealEstate'));
+  /** The switch is always there, so the option can be found before any portfolio is marked as real estate. */
   private readonly filter = computed(() => (this.realEstate.include() ? '' : '&excludeRealEstate=true'));
 
   private readonly overviewResource = httpResource<Overview>(() => `/api/overview?currency=${this.display.value()}${this.filter()}`);
