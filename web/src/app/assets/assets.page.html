@@ -36,14 +36,16 @@
         <dt>Cash</dt>
         <dd class="num">{{ a.cashValue | money: a.currency }}</dd>
       </div>
-      <div>
-        <dt>{{ dayLabel(a.dayChangeDate) }}</dt>
-        <dd><app-change [amount]="a.dayChange" [percent]="a.dayChangePercent" [currency]="a.currency" /></dd>
-      </div>
-      <div>
-        <dt>Unrealized gain</dt>
-        <dd><app-change [amount]="a.unrealizedGain" [percent]="a.unrealizedGainPercent" [currency]="a.currency" /></dd>
-      </div>
+      @if (auth.showGains()) {
+        <div>
+          <dt>{{ dayLabel(a.dayChangeDate) }}</dt>
+          <dd><app-change [amount]="a.dayChange" [percent]="a.dayChangePercent" [currency]="a.currency" /></dd>
+        </div>
+        <div>
+          <dt>Unrealized gain</dt>
+          <dd><app-change [amount]="a.unrealizedGain" [percent]="a.unrealizedGainPercent" [currency]="a.currency" /></dd>
+        </div>
+      }
       <div>
         <dt>Prices from</dt>
         <dd>{{ a.pricesAsOf | day: 'weekday' }}</dd>
@@ -68,7 +70,9 @@
               <th class="right hide-m" appSort="averageCost" [sort]="sort" defaultDirection="desc">Average cost</th>
               <th class="right hide-s" appSort="price" [sort]="sort" defaultDirection="desc">Price</th>
               <th class="right" appSort="marketValue" [sort]="sort" defaultDirection="desc">Market value</th>
-              <th class="right" appSort="unrealizedGain" [sort]="sort" defaultDirection="desc">Unrealized gain</th>
+              @if (auth.showGains()) {
+                <th class="right" appSort="unrealizedGain" [sort]="sort" defaultDirection="desc">Unrealized gain</th>
+              }
               <th class="right hide-m" appSort="weight" [sort]="sort" defaultDirection="desc">Weight</th>
             </tr>
           </thead>
@@ -93,7 +97,9 @@
                     <span class="muted">—</span>
                   } @else {
                     {{ h.price | price: h.currency }}
-                    <div class="small"><app-change [percent]="h.dayChangePercent" [showArrow]="false" /></div>
+                    @if (auth.showGains()) {
+                      <div class="small"><app-change [percent]="h.dayChangePercent" [showArrow]="false" /></div>
+                    }
                   }
                 </td>
                 <td class="right num">
@@ -102,10 +108,12 @@
                     <div class="small muted local">{{ h.marketValueLocal | money: h.currency }}</div>
                   }
                 </td>
-                <td class="right">
-                  <app-change [amount]="h.unrealizedGain" [currency]="a.currency" [showArrow]="false" />
-                  <div class="small"><app-change [percent]="h.unrealizedGainPercent" [showArrow]="false" /></div>
-                </td>
+                @if (auth.showGains()) {
+                  <td class="right">
+                    <app-change [amount]="h.unrealizedGain" [currency]="a.currency" [showArrow]="false" />
+                    <div class="small"><app-change [percent]="h.unrealizedGainPercent" [showArrow]="false" /></div>
+                  </td>
+                }
                 <td class="right num hide-m">{{ h.weight | pct: false : 1 }}</td>
               </tr>
             }
@@ -130,7 +138,9 @@
                     <div class="small muted local">{{ c.balance | money: c.currency }}</div>
                   }
                 </td>
-                <td></td>
+                @if (auth.showGains()) {
+                  <td></td>
+                }
                 <td class="right num hide-m">{{ c.weight | pct: false : 1 }}</td>
               </tr>
             }
@@ -142,7 +152,9 @@
               <td class="hide-m"></td>
               <td class="hide-s"></td>
               <td class="right num">{{ a.totalValue | money: a.currency }}</td>
-              <td class="right"><app-change [amount]="a.unrealizedGain" [currency]="a.currency" [showArrow]="false" /></td>
+              @if (auth.showGains()) {
+                <td class="right"><app-change [amount]="a.unrealizedGain" [currency]="a.currency" [showArrow]="false" /></td>
+              }
               <td class="hide-m"></td>
             </tr>
           </tfoot>
@@ -151,5 +163,5 @@
     }
   </section>
 } @else {
-  <p class="muted state">Loading your assets…</p>
+  <app-busy label="Loading your assets…" />
 }

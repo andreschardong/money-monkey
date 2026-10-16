@@ -196,10 +196,6 @@
   }
 }
 
-.loading {
-  padding: 48px 0;
-}
-
 @media (max-width: 760px) {
   .split {
     grid-template-columns: minmax(0, 1fr);

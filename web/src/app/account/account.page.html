@@ -13,6 +13,17 @@
 </header>
 
 <section class="panel">
+  <h2>Display</h2>
+  <mat-slide-toggle [checked]="auth.showGains()" (change)="setShowGains($event.checked)" [disabled]="savingDisplay()">
+    Show gains and losses
+  </mat-slide-toggle>
+  <p class="caption">
+    Day changes, returns, and unrealized and realized gains, in green and red, on every page. Turned off, Money Monkey
+    shows values and prices only. The choice is saved on your account, so your phone and your PC agree.
+  </p>
+</section>
+
+<section class="panel">
   <h2>Passkeys</h2>
   <p class="caption">
     A passkey signs you in with Windows Hello, Touch ID, Face ID or your password manager. Add one on each device
@@ -37,7 +48,7 @@
       </ul>
     }
   } @else {
-    <p class="muted empty">Loading…</p>
+    <app-busy label="Loading passkeys…" inline />
   }
 
   @if (auth.passkeysSupported) {
@@ -114,6 +125,6 @@
       Source and licence: <a href="https://github.com/andreschardong/money-monkey" target="_blank" rel="noopener">github.com/andreschardong/money-monkey</a>
     </p>
   } @else {
-    <p class="muted">Loading…</p>
+    <app-busy label="Loading…" inline />
   }
 </section>

@@ -29,7 +29,9 @@
       </div>
       <div class="last">
         <span class="price">{{ s.lastPrice | price: s.currency }}</span>
-        <app-change [percent]="s.dayChangePercent" />
+        @if (auth.showGains()) {
+          <app-change [percent]="s.dayChangePercent" />
+        }
         <span class="muted">Close on {{ s.lastPriceDate | day: 'weekday' }}</span>
       </div>
     </section>
@@ -45,10 +47,12 @@
 
     @if (stats(); as st) {
       <dl class="facts">
-        <div>
-          <dt>Change over the range</dt>
-          <dd><app-change [amount]="st.change" [percent]="st.changePercent" [currency]="p.currency" /></dd>
-        </div>
+        @if (auth.showGains()) {
+          <div>
+            <dt>Change over the range</dt>
+            <dd><app-change [amount]="st.change" [percent]="st.changePercent" [currency]="p.currency" /></dd>
+          </div>
+        }
         <div>
           <dt>High</dt>
           <dd class="num">{{ st.high.close | price: p.currency }} <span class="muted">{{ st.high.date | day: 'short' }}</span></dd>
@@ -80,8 +84,10 @@
             <tr>
               <th appSort="date" [sort]="closeSort" defaultDirection="desc">Date</th>
               <th class="right" appSort="close" [sort]="closeSort" defaultDirection="desc">Close</th>
-              <th class="right" appSort="change" [sort]="closeSort" defaultDirection="desc">Change</th>
-              <th class="right" appSort="changePercent" [sort]="closeSort" defaultDirection="desc">%</th>
+              @if (auth.showGains()) {
+                <th class="right" appSort="change" [sort]="closeSort" defaultDirection="desc">Change</th>
+                <th class="right" appSort="changePercent" [sort]="closeSort" defaultDirection="desc">%</th>
+              }
             </tr>
           </thead>
           <tbody>
@@ -89,8 +95,10 @@
               <tr>
                 <td class="num">{{ r.date | day }}</td>
                 <td class="right num">{{ r.close | price: p.currency }}</td>
-                <td class="right"><app-change [amount]="r.change" [currency]="p.currency" [showArrow]="false" /></td>
-                <td class="right"><app-change [percent]="r.changePercent" [showArrow]="false" /></td>
+                @if (auth.showGains()) {
+                  <td class="right"><app-change [amount]="r.change" [currency]="p.currency" [showArrow]="false" /></td>
+                  <td class="right"><app-change [percent]="r.changePercent" [showArrow]="false" /></td>
+                }
               </tr>
             }
           </tbody>

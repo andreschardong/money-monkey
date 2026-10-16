@@ -360,6 +360,8 @@ export interface Me {
   inboxUrl: string | null;
   /** Where Money Monkey is set up to be opened; passkeys work only there, or on localhost. */
   publicUrl: string;
+  /** Values and prices only: no gain, loss or change figure anywhere. Saved on the account, not in the browser. */
+  hideGains: boolean;
 }
 
 export interface EmailLinkSent {

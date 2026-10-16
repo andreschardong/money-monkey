@@ -34,20 +34,22 @@
     </div>
 
     <dl class="facts">
-      <div>
-        <dt>{{ dayLabel(o.dayChangeDate) }}</dt>
-        <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
-      </div>
-      <div>
-        <dt>Total return</dt>
-        <dd>
-          @if (o.totalReturn !== null) {
-            <app-change [amount]="o.totalReturn" [percent]="o.totalReturnPercent" [currency]="o.currency" />
-          } @else {
-            <span class="muted">Record deposits to track</span>
-          }
-        </dd>
-      </div>
+      @if (auth.showGains()) {
+        <div>
+          <dt>{{ dayLabel(o.dayChangeDate) }}</dt>
+          <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
+        </div>
+        <div>
+          <dt>Total return</dt>
+          <dd>
+            @if (o.totalReturn !== null) {
+              <app-change [amount]="o.totalReturn" [percent]="o.totalReturnPercent" [currency]="o.currency" />
+            } @else {
+              <span class="muted">Record deposits to track</span>
+            }
+          </dd>
+        </div>
+      }
       <div>
         <dt>Net deposits</dt>
         <dd class="num">{{ o.netContributions | money: o.currency }}</dd>
@@ -82,8 +84,10 @@
         <tr>
           <th appSort="name" [sort]="portfolioSort">Portfolio</th>
           <th class="right" appSort="value" [sort]="portfolioSort" defaultDirection="desc">Value</th>
-          <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">{{ dayLabel(o.dayChangeDate) }}</th>
-          <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
+          @if (auth.showGains()) {
+            <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">{{ dayLabel(o.dayChangeDate) }}</th>
+            <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
+          }
         </tr>
       </thead>
       <tbody>
@@ -105,15 +109,17 @@
                 <div class="muted small">{{ p.value | money: p.baseCurrency }}</div>
               }
             </td>
-            <td class="right hide-s"><app-change [amount]="p.dayChangeInDisplay" [currency]="o.currency" [showArrow]="false" /></td>
-            <td class="right">
-              @if (p.totalReturnInDisplay !== null) {
-                <app-change [amount]="p.totalReturnInDisplay" [currency]="o.currency" [showArrow]="false" />
-                <div class="small"><app-change [percent]="p.totalReturnPercent" [showArrow]="false" /></div>
-              } @else {
-                <span class="muted">—</span>
-              }
-            </td>
+            @if (auth.showGains()) {
+              <td class="right hide-s"><app-change [amount]="p.dayChangeInDisplay" [currency]="o.currency" [showArrow]="false" /></td>
+              <td class="right">
+                @if (p.totalReturnInDisplay !== null) {
+                  <app-change [amount]="p.totalReturnInDisplay" [currency]="o.currency" [showArrow]="false" />
+                  <div class="small"><app-change [percent]="p.totalReturnPercent" [showArrow]="false" /></div>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            }
           </tr>
         }
       </tbody>
@@ -142,7 +148,7 @@
     </section>
   </div>
 
-  @if (o.movers.length) {
+  @if (o.movers.length && auth.showGains()) {
     <section class="panel">
       <h2>Biggest moves</h2>
       <p class="caption">Last close against the one before, for everything you hold.</p>
@@ -159,5 +165,5 @@
     </section>
   }
 } @else {
-  <div class="loading muted" aria-live="polite">Loading your portfolios…</div>
+  <app-busy label="Loading your portfolios…" />
 }
