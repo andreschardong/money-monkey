@@ -18,7 +18,7 @@
   </section>
 } @else if (overview(); as o) {
   <section class="hero" [class.refreshing]="loadingOverview()">
-    <h1 class="title">Net worth@if (hasRealEstate() && !realEstate.include()) {<span class="muted"> without real estate</span>}</h1>
+    <h1 class="title">Net worth@if (!realEstate.include()) {<span class="muted"> without real estate</span>}</h1>
     <div class="figure-row">
       <app-hero-figure [value]="o.totalValue" [currency]="o.currency" />
       <mat-button-toggle-group
@@ -31,11 +31,9 @@
           <mat-button-toggle [value]="c">{{ c }}</mat-button-toggle>
         }
       </mat-button-toggle-group>
-      @if (hasRealEstate()) {
-        <mat-slide-toggle class="real-estate" [checked]="realEstate.include()" (change)="realEstate.set($event.checked)">
-          Include real estate
-        </mat-slide-toggle>
-      }
+      <mat-slide-toggle class="real-estate" [checked]="realEstate.include()" (change)="realEstate.set($event.checked)">
+        Include real estate
+      </mat-slide-toggle>
     </div>
 
     <dl class="facts">
