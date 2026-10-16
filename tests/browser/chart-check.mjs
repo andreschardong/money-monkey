@@ -15,24 +15,34 @@ const browser = await chromium.launch({ channel: 'msedge' });
 let failures = 0;
 const report = (ok, text) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${text}`); if (!ok) failures++; };
 
-/** Money labels on the vertical axis of the first chart matching the selector, as numbers ("$50K" -> 50000). */
-async function axisValues(page, selector) {
+const MONEY = /^(-?)[^\d\s-]+([\d.,]+)\s*([KMB])?$/;
+
+/** Money labels on the vertical axis of the first chart matching the selector, as printed ("$50K", "$1.16M"). */
+async function axisLabels(page, selector) {
   const svg = page.locator(`${selector} svg`).first();
   await svg.waitFor({ timeout: 20000 });
   await page.waitForTimeout(800); // animation
-  const labels = await svg.locator('text').allTextContents();
-  const scale = { K: 1e3, M: 1e6, B: 1e9 };
-  return labels
-    .map(t => /^(-?)[^\d\s-]+([\d.,]+)\s*([KMB])?$/.exec(t.trim()))
-    .filter(Boolean)
-    .map(m => (m[1] ? -1 : 1) * parseFloat(m[2].replace(/,/g, '')) * (scale[m[3]] ?? 1));
+  return (await svg.locator('text').allTextContents()).map(t => t.trim()).filter(t => MONEY.test(t));
+}
+
+/** The same labels as numbers ("$50K" -> 50000). */
+const toValues = labels => labels.map(t => MONEY.exec(t)).map(m =>
+  (m[1] ? -1 : 1) * parseFloat(m[2].replace(/,/g, '')) * ({ K: 1e3, M: 1e6, B: 1e9 }[m[3]] ?? 1));
+async function axisValues(page, selector) { return toValues(await axisLabels(page, selector)); }
+
+/** Every tick prints differently: the label precision follows the tick spacing ("$1.16M", not "$1.2M" thrice). */
+async function expectDistinct(page, name, selector) {
+  const labels = await axisLabels(page, selector);
+  report(labels.length >= 2 && new Set(labels).size === labels.length, `${name}: labels distinct ${JSON.stringify(labels)}`);
+  return labels;
 }
 
 /** The axis has labels and its lowest one sits above zero: the chart is zoomed to the data, not anchored at $0. */
 async function expectFitted(page, name, url, selector, shot) {
   await page.goto(`${base}${url}`);
-  const values = await axisValues(page, selector);
-  report(values.length >= 2 && Math.min(...values) > 0, `${name}: axis labels ${JSON.stringify(values)}`);
+  const labels = await expectDistinct(page, name, selector);
+  const values = toValues(labels);
+  report(values.length >= 2 && Math.min(...values) > 0, `${name}: axis fits the data ${JSON.stringify(values)}`);
   await page.locator(selector).first().screenshot({ path: `shots/${shot}.png` });
 }
 
@@ -77,10 +87,15 @@ const json = async (response) => {
   const portfolio = await post('/api/portfolios', { name: 'Buys only', baseCurrency: 'CAD', description: 'No deposit recorded' });
   const ry = await post('/api/securities', { symbol: 'RY.TO', historyFrom: '2025-10-01' });
   const { close } = await json(await api.get(`${base}/api/securities/${ry.id}/price-on?date=2025-10-01`));
-  await post(`/api/portfolios/${portfolio.id}/transactions`, { type: 'Buy', date: '2025-10-01', securityId: ry.id, quantity: 40, price: close, fee: 9.99 });
+  // 4,000 shares: a value around $1.1M whose one-month moves are a few thousand dollars, so the ticks need two decimals.
+  await post(`/api/portfolios/${portfolio.id}/transactions`, { type: 'Buy', date: '2025-10-01', securityId: ry.id, quantity: 4000, price: close, fee: 9.99 });
 
   await expectFitted(page, 'buys-only portfolio value chart', `/portfolios/${portfolio.id}`, 'app-value-chart', 'chart-no-deposits');
   report((await page.locator('app-value-chart .legend').getByText('Net deposits').count()) === 0, 'buys-only legend hides Net deposits');
+  await page.getByRole('radio', { name: '1M' }).click();
+  await page.waitForTimeout(400);
+  await expectDistinct(page, 'buys-only portfolio, 1M range (zoomed-in ticks)', 'app-value-chart');
+  await page.locator('app-value-chart').screenshot({ path: 'shots/chart-no-deposits-1m.png' });
   await page.getByRole('button', { name: 'Table' }).click();
   await page.locator('app-value-chart table th').first().waitFor();
   const headers = await page.locator('app-value-chart table th').allTextContents();

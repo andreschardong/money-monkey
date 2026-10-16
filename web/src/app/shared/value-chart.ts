@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { formatCompactMoney, formatDate, formatMoney, FORMAT_PIPES } from '../core/format';
+import { compactAxisFormatter, formatDate, formatMoney, FORMAT_PIPES } from '../core/format';
 import { Currency, HistoryPoint, Range } from '../core/models';
 import { Theme } from '../core/theme';
 import { chartTheme } from './chart-theme';
@@ -59,6 +59,8 @@ export class ValueChart {
     const points = this.points();
     const withDeposits = this.hasContributions();
     const font = getComputedStyle(document.body).fontFamily;
+    const axisLabel = compactAxisFormatter(
+      withDeposits ? points.flatMap(p => [p.value, p.netContributions]) : points.map(p => p.value), currency);
 
     return {
       animation: !reducedMotion(),
@@ -113,7 +115,7 @@ export class ValueChart {
         // The axis fits the data rather than starting at zero, so a steady portfolio's moves stay visible.
         scale: true,
         splitNumber: 4,
-        axisLabel: { color: t.ink3, formatter: (value: number) => formatCompactMoney(value, currency) },
+        axisLabel: { color: t.ink3, formatter: axisLabel },
         splitLine: { lineStyle: { color: t.grid, width: 1, type: 'solid' } },
       },
       series: [

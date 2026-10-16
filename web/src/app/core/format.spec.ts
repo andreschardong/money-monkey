@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
-import { direction, formatDate, formatMoney, formatPercent, formatPrice, formatQuantity, fromIsoDate, toIsoDate, sessionLabel } from './format';
+import { compactAxisFormatter, direction, formatCompactMoney, formatDate, formatMoney, formatPercent, formatPrice, formatQuantity, fromIsoDate, toIsoDate, sessionLabel } from './format';
 import { LocalDateAdapter } from './date-adapter';
 
 describe('formatMoney', () => {
@@ -19,6 +19,24 @@ describe('formatMoney', () => {
   it('drops cents from amounts in the millions and shows a dash for missing values', () => {
     expect(formatMoney(2_500_000.75, 'CAD')).toBe('$2,500,001');
     expect(formatMoney(null, 'CAD')).toBe('—');
+  });
+});
+
+describe('compactAxisFormatter', () => {
+  it('shows as many decimals as the tick spacing needs', () => {
+    const zoomed = compactAxisFormatter([1_150_000, 1_240_000], 'CAD'); // ticks 20K apart
+    expect(zoomed(1_160_000)).toBe('$1.16M');
+    expect(zoomed(1_200_000)).toBe('$1.20M');
+    const wide = compactAxisFormatter([100_000, 350_000], 'USD'); // ticks 50K apart
+    expect(wide(150_000)).toBe('US$150K');
+    expect(wide(0)).toBe('US$0');
+  });
+
+  it('keeps whole dollars for share prices and falls back to the full amount when ticks are tiny', () => {
+    expect(compactAxisFormatter([180, 330], 'CAD')(210)).toBe('$210');
+    expect(compactAxisFormatter([1_200_100, 1_200_500], 'CAD')(1_200_300)).toBe('$1,200,300');
+    expect(compactAxisFormatter([], 'CAD')(2_500_000)).toBe('$2.5M');
+    expect(formatCompactMoney(-42_000, 'EUR')).toBe('−€42.0K');
   });
 });
 
