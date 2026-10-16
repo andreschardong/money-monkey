@@ -97,3 +97,28 @@ function readDisplayCurrency(): Currency {
     return 'CAD';
   }
 }
+
+const REAL_ESTATE_KEY = 'folio.includeRealEstate';
+
+/** Whether the overview counts real-estate portfolios. A way of looking, like the display currency, so it stays in this browser. */
+@Injectable({ providedIn: 'root' })
+export class RealEstateFilter {
+  readonly include = signal(readIncludeRealEstate());
+
+  set(include: boolean): void {
+    this.include.set(include);
+    try {
+      localStorage.setItem(REAL_ESTATE_KEY, include ? 'yes' : 'no');
+    } catch {
+      // Storage unavailable: the choice lasts for this visit.
+    }
+  }
+}
+
+function readIncludeRealEstate(): boolean {
+  try {
+    return localStorage.getItem(REAL_ESTATE_KEY) !== 'no';
+  } catch {
+    return true;
+  }
+}

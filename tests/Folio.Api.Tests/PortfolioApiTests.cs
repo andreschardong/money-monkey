@@ -350,6 +350,38 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
     }
 
+    [Fact]
+    public async Task A_real_estate_portfolio_can_be_left_out_of_the_overview()
+    {
+        var savings = await CreatePortfolioAsync("CAD");
+        await SetCashAsync(savings, "CAD", 1_000m, D("2026-09-01"));
+        var created = await _client.PostAsJsonAsync("/api/portfolios",
+            new CreatePortfolioRequest("Apartment", "CAD", null, "BR", PortfolioKind.RealEstate), Json, Ct);
+        created.EnsureSuccessStatusCode();
+        var home = (await created.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!;
+        Assert.Equal(PortfolioKind.RealEstate, home.Kind);
+        var security = await _client.PostAsJsonAsync("/api/securities/manual",
+            new ManualSecurityRequest("APT-SP", "Apartment in São Paulo", "CAD", AssetType.Other, 500_000m, D("2026-10-01")), Json, Ct);
+        security.EnsureSuccessStatusCode();
+        var apartment = (await security.Content.ReadFromJsonAsync<SecurityDto>(Json, Ct))!.Id;
+        await AddAsync(home.Id, new TransactionRequest(TransactionType.Buy, D("2026-10-01"), SecurityId: apartment, Quantity: 1m, Price: 500_000m));
+
+        var everything = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        Assert.Equal(501_000m, everything.TotalValue);
+        Assert.Contains(everything.Portfolios, p => p.Id == home.Id && p.Kind == PortfolioKind.RealEstate);
+        Assert.Equal(500_000m, everything.ByAssetType.Single(a => a.Key == "RealEstate").Value);
+        Assert.Equal("Real estate", everything.ByAssetType.Single(a => a.Key == "RealEstate").Label);
+
+        var liquid = await GetAsync<OverviewDto>("/api/overview?currency=CAD&excludeRealEstate=true");
+        Assert.Equal(1_000m, liquid.TotalValue);
+        Assert.DoesNotContain(liquid.Portfolios, p => p.Id == home.Id);
+        Assert.DoesNotContain(liquid.ByAssetType, a => a.Key == "RealEstate");
+
+        var history = await GetAsync<HistoryDto>("/api/overview/history?currency=CAD&range=1M&excludeRealEstate=true");
+        Assert.Equal(1_000m, history.Points[^1].Value);
+        Assert.Equal(PortfolioKind.RealEstate, (await GetAsync<ExportDto>("/api/export")).Portfolios.Single(p => p.Id == home.Id).Kind);
+    }
+
     private static DateOnly D(string iso) => DateOnly.Parse(iso, System.Globalization.CultureInfo.InvariantCulture);
 
     private async Task<Guid> CreatePortfolioAsync(string currency)

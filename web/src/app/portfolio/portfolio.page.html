@@ -12,7 +12,12 @@
 } @else if (detail(); as d) {
   <header class="header">
     <div class="identity">
-      <h1>{{ d.summary.name }} <span class="currency-code">{{ d.summary.baseCurrency }}</span></h1>
+      <h1>
+        {{ d.summary.name }} <span class="currency-code">{{ d.summary.baseCurrency }}</span>
+        @if (d.summary.kind === 'RealEstate') {
+          <span class="currency-code" data-testid="kind">Real estate</span>
+        }
+      </h1>
       @if (d.summary.description) {
         <p class="description">{{ d.summary.description }}</p>
       }

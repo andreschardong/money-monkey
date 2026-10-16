@@ -25,6 +25,13 @@ export const PORTFOLIO_CURRENCIES: readonly Currency[] = ['CAD', 'USD', 'EUR'];
 /** Owner: everything. Edit: transactions and cash. View: look only. */
 export type PortfolioAccess = 'Owner' | 'Edit' | 'View';
 
+/** Investment account (the default) or real estate, which the overview can leave out. */
+export type PortfolioKind = 'Investment' | 'RealEstate';
+export const PORTFOLIO_KINDS: readonly { value: PortfolioKind; label: string }[] = [
+  { value: 'Investment', label: 'Investment' },
+  { value: 'RealEstate', label: 'Real estate' },
+];
+
 export interface PortfolioSummary {
   id: string;
   name: string;
@@ -32,6 +39,7 @@ export interface PortfolioSummary {
   description: string | null;
   /** ISO 3166-1 alpha-2 (CA, US, BR), or null; see core/countries.ts. */
   country: string | null;
+  kind: PortfolioKind;
   totalValue: number;
   holdingsValue: number;
   cashValue: number;
@@ -314,6 +322,7 @@ export interface OverviewPortfolio {
   access: PortfolioAccess;
   ownerEmail: string | null;
   country: string | null;
+  kind: PortfolioKind;
 }
 
 export interface Allocation {
