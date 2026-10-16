@@ -21,6 +21,9 @@ nav {
   flex-direction: column;
   min-height: 100%;
   padding: 20px 12px 16px;
+  // Nothing in the rail may widen it: a long email or portfolio name is cut short with an ellipsis instead of
+  // giving the drawer a sideways scroll bar.
+  overflow-x: clip;
 }
 
 // The wordmark is the one place the width axis goes all the way out.
@@ -47,6 +50,7 @@ nav {
   width: 100%;
   padding: 9px 12px;
   border: 0;
+  min-width: 0;
   border-radius: var(--radius-m);
   background: none;
   color: var(--ink-2);
@@ -98,6 +102,7 @@ nav {
 
 .portfolio {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   padding: 8px 12px;
   border-radius: var(--radius-m);
@@ -151,6 +156,7 @@ nav {
 
 .foot {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 2px;
   margin-top: auto;
   padding-top: 24px;
