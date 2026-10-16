@@ -1,7 +1,9 @@
 <div class="head">
   <ul class="legend" aria-label="Chart legend">
     <li><i class="key" style="--key: var(--chart-1)"></i>Value</li>
-    <li><i class="key" style="--key: var(--chart-2)"></i>Net deposits</li>
+    @if (hasContributions()) {
+      <li><i class="key" style="--key: var(--chart-2)"></i>Net deposits</li>
+    }
   </ul>
 
   <div class="controls">
@@ -30,8 +32,10 @@
           <tr>
             <th appSort="date" [sort]="sort" defaultDirection="desc">Month end</th>
             <th class="right" appSort="value" [sort]="sort" defaultDirection="desc">Value</th>
-            <th class="right" appSort="netContributions" [sort]="sort" defaultDirection="desc">Net deposits</th>
-            <th class="right" appSort="earned" [sort]="sort" defaultDirection="desc">Earned</th>
+            @if (hasContributions()) {
+              <th class="right" appSort="netContributions" [sort]="sort" defaultDirection="desc">Net deposits</th>
+              <th class="right" appSort="earned" [sort]="sort" defaultDirection="desc">Earned</th>
+            }
           </tr>
         </thead>
         <tbody>
@@ -39,10 +43,12 @@
             <tr>
               <td>{{ row.date | day }}</td>
               <td class="right num">{{ row.value | money: currency() }}</td>
-              <td class="right num">{{ row.netContributions | money: currency() }}</td>
-              <td class="right num" [class.gain]="row.value > row.netContributions" [class.loss]="row.value < row.netContributions">
-                {{ row.value - row.netContributions | money: currency() : true }}
-              </td>
+              @if (hasContributions()) {
+                <td class="right num">{{ row.netContributions | money: currency() }}</td>
+                <td class="right num" [class.gain]="row.value > row.netContributions" [class.loss]="row.value < row.netContributions">
+                  {{ row.value - row.netContributions | money: currency() : true }}
+                </td>
+              }
             </tr>
           }
         </tbody>

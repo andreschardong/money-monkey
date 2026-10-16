@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, output } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { formatCompactMoney, formatDate, formatPrice, formatQuantity } from '../core/format';
+import { compactAxisFormatter, formatDate, formatPrice, formatQuantity } from '../core/format';
 import { Currency, PricePoint, Range, Transaction } from '../core/models';
 import { Theme } from '../core/theme';
 import { chartTheme } from '../shared/chart-theme';
@@ -108,6 +108,7 @@ export class PriceChart {
       value: [trade.date, trade.chartPrice],
       trade,
     });
+    const axisLabel = compactAxisFormatter([...line.map(([, close]) => close as number), ...inRange.map(x => x.chartPrice)], currency);
 
     return {
       animation: !reducedMotion(),
@@ -155,7 +156,7 @@ export class PriceChart {
         type: 'value',
         scale: true,
         splitNumber: 4,
-        axisLabel: { color: t.ink3, formatter: (value: number) => formatCompactMoney(value, currency) },
+        axisLabel: { color: t.ink3, formatter: axisLabel },
         splitLine: { lineStyle: { color: t.grid, width: 1, type: 'solid' } },
       },
       series: [
