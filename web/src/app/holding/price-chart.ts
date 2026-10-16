@@ -153,8 +153,7 @@ export class PriceChart {
       },
       yAxis: {
         type: 'value',
-        // Not `scale: true`: the axis always includes zero, so the height of the line is the size of the money.
-        scale: false,
+        scale: true,
         splitNumber: 4,
         axisLabel: { color: t.ink3, formatter: (value: number) => formatCompactMoney(value, currency) },
         splitLine: { lineStyle: { color: t.grid, width: 1, type: 'solid' } },

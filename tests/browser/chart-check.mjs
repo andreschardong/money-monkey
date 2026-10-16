@@ -1,6 +1,8 @@
-// The value and price charts start their vertical axis at zero. Signs in as the demo account (or a fresh one with
-// the smoke-test portfolio), reads the rendered axis labels of each chart, and saves a screenshot of each.
-// Usage: node chart-check.mjs [baseUrl] [mailpitUrl]   (registration open on the target)
+// The charts fit their vertical axis to the data instead of starting at zero, and the value chart leaves out the
+// net-deposits line while a portfolio has no deposit recorded (a flat zero line would pin the axis to zero).
+// Signs in as the demo account (deposits recorded) and as a fresh account with a buy-only portfolio, reads the
+// rendered axis labels, and saves a screenshot of each chart.
+// Usage: node chart-check.mjs [baseUrl] [mailpitUrl]   (registration open on the target; prices need the internet)
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 import { seedPortfolio, signIn } from './session.mjs';
@@ -10,17 +12,11 @@ const mailpit = process.argv[3] ?? 'http://localhost:8025';
 mkdirSync('shots', { recursive: true });
 
 const browser = await chromium.launch({ channel: 'msedge' });
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
-const page = await context.newPage();
-page.on('pageerror', e => console.log(`[pageerror] ${e.message}`));
-await signIn(page, base, mailpit, process.env.CHART_EMAIL ?? 'demo@moneymonkey.example');
-const api = context.request;
-if ((await (await api.get(`${base}/api/portfolios`)).json()).length === 0) {
-  await seedPortfolio(api, base);
-}
+let failures = 0;
+const report = (ok, text) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${text}`); if (!ok) failures++; };
 
-/** Money labels on the vertical axis of the first chart on the page, as numbers (compact: "$50K" -> 50000). */
-async function axisValues(selector) {
+/** Money labels on the vertical axis of the first chart matching the selector, as numbers ("$50K" -> 50000). */
+async function axisValues(page, selector) {
   const svg = page.locator(`${selector} svg`).first();
   await svg.waitFor({ timeout: 20000 });
   await page.waitForTimeout(800); // animation
@@ -32,36 +28,70 @@ async function axisValues(selector) {
     .map(m => (m[1] ? -1 : 1) * parseFloat(m[2].replace(/,/g, '')) * (scale[m[3]] ?? 1));
 }
 
-let failures = 0;
-async function check(name, url, selector, shot) {
+/** The axis has labels and its lowest one sits above zero: the chart is zoomed to the data, not anchored at $0. */
+async function expectFitted(page, name, url, selector, shot) {
   await page.goto(`${base}${url}`);
-  const values = await axisValues(selector);
-  const min = Math.min(...values);
-  const ok = values.length >= 2 && min === 0;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}: axis labels ${JSON.stringify(values)}`);
-  if (!ok) failures++;
+  const values = await axisValues(page, selector);
+  report(values.length >= 2 && Math.min(...values) > 0, `${name}: axis labels ${JSON.stringify(values)}`);
   await page.locator(selector).first().screenshot({ path: `shots/${shot}.png` });
 }
 
-await check('overview value chart', '/', 'app-value-chart', 'chart-overview');
-await page.getByRole('radio', { name: 'All' }).click();
+const json = async (response) => {
+  if (!response.ok()) throw new Error(`${response.status()} ${await response.text()}`);
+  return response.json();
+};
+
+// ------------------------------------------------------------------ deposits recorded: both lines, fitted axis
 {
-  const values = await axisValues('app-value-chart');
-  const ok = values.length >= 2 && Math.min(...values) === 0;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} overview value chart, All range: axis labels ${JSON.stringify(values)}`);
-  if (!ok) failures++;
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  const page = await context.newPage();
+  page.on('pageerror', e => console.log(`[pageerror] ${e.message}`));
+  await signIn(page, base, mailpit, process.env.CHART_EMAIL ?? 'demo@moneymonkey.example');
+  const api = context.request;
+  if ((await json(await api.get(`${base}/api/portfolios`))).length === 0) {
+    await seedPortfolio(api, base);
+  }
+  await expectFitted(page, 'overview value chart', '/', 'app-value-chart', 'chart-overview');
+  report(await page.locator('app-value-chart .legend').getByText('Net deposits').isVisible(), 'overview legend shows Net deposits (deposits recorded)');
+  await page.getByRole('radio', { name: 'All' }).click();
+  const all = await axisValues(page, 'app-value-chart');
+  report(all.length >= 2 && Math.min(...all) >= 0, `overview value chart, All range: axis labels ${JSON.stringify(all)}`);
+
+  const portfolios = await json(await api.get(`${base}/api/portfolios`));
+  const detail = await json(await api.get(`${base}/api/portfolios/${portfolios[0].id}`));
+  await expectFitted(page, 'portfolio value chart', `/portfolios/${portfolios[0].id}`, 'app-value-chart', 'chart-portfolio');
+  const holding = detail.holdings.find(h => h.securityId) ?? detail.holdings[0];
+  await expectFitted(page, 'holding price chart', `/portfolios/${portfolios[0].id}/holdings/${holding.securityId}`, 'app-price-chart', 'chart-holding');
+  await expectFitted(page, 'quotes price chart', '/quotes?symbol=SHOP.TO', 'app-price-chart', 'chart-quotes');
+  await context.close();
 }
 
-const portfolios = await (await api.get(`${base}/api/portfolios`)).json();
-const detail = await (await api.get(`${base}/api/portfolios/${portfolios[0].id}`)).json();
-await check('portfolio value chart', `/portfolios/${portfolios[0].id}`, 'app-value-chart', 'chart-portfolio');
-const holding = detail.holdings.find(h => h.securityId) ?? detail.holdings[0];
-await check('holding price chart', `/portfolios/${portfolios[0].id}/holdings/${holding.securityId}`, 'app-price-chart', 'chart-holding');
-await check('quotes price chart', '/quotes?symbol=SHOP.TO', 'app-price-chart', 'chart-quotes');
+// ------------------------------------------------------------------ no deposit recorded: value line only, fitted axis
+{
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  const page = await context.newPage();
+  page.on('pageerror', e => console.log(`[pageerror] ${e.message}`));
+  await signIn(page, base, mailpit);
+  const api = context.request;
+  const post = async (path, data) => json(await api.post(`${base}${path}`, { data }));
+  const portfolio = await post('/api/portfolios', { name: 'Buys only', baseCurrency: 'CAD', description: 'No deposit recorded' });
+  const ry = await post('/api/securities', { symbol: 'RY.TO', historyFrom: '2025-10-01' });
+  const { close } = await json(await api.get(`${base}/api/securities/${ry.id}/price-on?date=2025-10-01`));
+  await post(`/api/portfolios/${portfolio.id}/transactions`, { type: 'Buy', date: '2025-10-01', securityId: ry.id, quantity: 40, price: close, fee: 9.99 });
+
+  await expectFitted(page, 'buys-only portfolio value chart', `/portfolios/${portfolio.id}`, 'app-value-chart', 'chart-no-deposits');
+  report((await page.locator('app-value-chart .legend').getByText('Net deposits').count()) === 0, 'buys-only legend hides Net deposits');
+  await page.getByRole('button', { name: 'Table' }).click();
+  await page.locator('app-value-chart table th').first().waitFor();
+  const headers = await page.locator('app-value-chart table th').allTextContents();
+  report(!headers.some(h => /Net deposits|Earned/.test(h)), `buys-only table columns: ${JSON.stringify(headers.map(h => h.trim()))}`);
+  await page.locator('app-value-chart').screenshot({ path: 'shots/chart-no-deposits-table.png' });
+  await context.close();
+}
 
 await browser.close();
 if (failures) {
-  console.log(`${failures} chart(s) do not start at zero`);
+  console.log(`${failures} chart check(s) failed`);
   process.exit(1);
 }
-console.log('every chart starts at zero');
+console.log('charts fit their data');
