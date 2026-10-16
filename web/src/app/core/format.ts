@@ -53,14 +53,42 @@ export function formatPrice(value: number | null | undefined, currency: Currency
   }).format(value));
 }
 
-export function formatCompactMoney(value: number, currency: Currency): string {
-  return withMinus(numberFormat(`c|${currency}`, {
+/** "$1.2M", "$150K"; `digits` fixes the decimals shown ("$1.20M" with 2). */
+export function formatCompactMoney(value: number, currency: Currency, digits = 1): string {
+  return withMinus(numberFormat(`c|${currency}|${digits}`, {
     style: 'currency',
     currency,
     currencyDisplay: 'symbol',
     notation: 'compact',
-    maximumFractionDigits: 1,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(value));
+}
+
+/** The tick interval ECharts picks for a span: 1, 2, 3, 5 or 10 times a power of ten. */
+function niceInterval(span: number, ticks: number): number {
+  const raw = span / ticks;
+  const base = Math.pow(10, Math.floor(Math.log10(raw)));
+  const f = raw / base;
+  return (f < 1.5 ? 1 : f < 2.5 ? 2 : f < 4 ? 3 : f < 7 ? 5 : 10) * base;
+}
+
+/**
+ * Compact money for a chart axis whose ticks are `ticks` apart over the plotted `values`: the decimals follow the
+ * tick spacing, so a zoomed-in axis reads "$1.16M, $1.18M, $1.20M" rather than "$1.2M" three times, while a wide
+ * one keeps "$100K, $150K". Ticks closer than a thousandth of their unit fall back to the full amount.
+ */
+export function compactAxisFormatter(values: readonly number[], currency: Currency, ticks = 4): (value: number) => string {
+  const finite = values.filter(v => Number.isFinite(v));
+  const span = finite.length ? Math.max(...finite) - Math.min(...finite) : 0;
+  const interval = span > 0 ? niceInterval(span, ticks) : 0;
+  const intervalExponent = interval > 0 ? Math.floor(Math.log10(interval) + 1e-9) : 0;
+  return (value: number) => {
+    const magnitude = Math.abs(value);
+    const unitExponent = magnitude >= 1e9 ? 9 : magnitude >= 1e6 ? 6 : magnitude >= 1e3 ? 3 : 0;
+    const digits = interval > 0 ? Math.max(0, unitExponent - intervalExponent) : 1;
+    return digits > 3 ? formatMoney(value, currency, { decimals: 0 }) : formatCompactMoney(value, currency, digits);
+  };
 }
 
 /** Ratios arrive as fractions (0.0123); shown as "+1.23%". */
