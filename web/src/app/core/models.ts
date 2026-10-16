@@ -25,11 +25,21 @@ export const PORTFOLIO_CURRENCIES: readonly Currency[] = ['CAD', 'USD', 'EUR'];
 /** Owner: everything. Edit: transactions and cash. View: look only. */
 export type PortfolioAccess = 'Owner' | 'Edit' | 'View';
 
+/** Investment account (the default) or real estate, which the overview can leave out. */
+export type PortfolioKind = 'Investment' | 'RealEstate';
+export const PORTFOLIO_KINDS: readonly { value: PortfolioKind; label: string }[] = [
+  { value: 'Investment', label: 'Investment' },
+  { value: 'RealEstate', label: 'Real estate' },
+];
+
 export interface PortfolioSummary {
   id: string;
   name: string;
   baseCurrency: Currency;
   description: string | null;
+  /** ISO 3166-1 alpha-2 (CA, US, BR), or null; see core/countries.ts. */
+  country: string | null;
+  kind: PortfolioKind;
   totalValue: number;
   holdingsValue: number;
   cashValue: number;
@@ -311,6 +321,8 @@ export interface OverviewPortfolio {
   holdingsCount: number;
   access: PortfolioAccess;
   ownerEmail: string | null;
+  country: string | null;
+  kind: PortfolioKind;
 }
 
 export interface Allocation {
@@ -342,6 +354,8 @@ export interface Overview {
   portfolios: OverviewPortfolio[];
   byCurrency: Allocation[];
   byAssetType: Allocation[];
+  /** Keyed by country code; the key is empty for portfolios without one. */
+  byCountry: Allocation[];
   movers: Mover[];
   warnings: string[];
   dayChangeDate: IsoDate | null;
@@ -360,6 +374,8 @@ export interface Me {
   inboxUrl: string | null;
   /** Where Money Monkey is set up to be opened; passkeys work only there, or on localhost. */
   publicUrl: string;
+  /** Values and prices only: no gain, loss or change figure anywhere. Saved on the account, not in the browser. */
+  hideGains: boolean;
 }
 
 export interface EmailLinkSent {

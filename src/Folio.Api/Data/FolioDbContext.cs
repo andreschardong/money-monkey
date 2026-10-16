@@ -38,6 +38,7 @@ public sealed class FolioDbContext(DbContextOptions<FolioDbContext> options, ICu
         builder.Properties<CorporateActionKind>().HaveConversion<string>().HaveMaxLength(10);
         builder.Properties<RefreshStatus>().HaveConversion<string>().HaveMaxLength(20);
         builder.Properties<EmailLinkPurpose>().HaveConversion<string>().HaveMaxLength(10);
+        builder.Properties<PortfolioKind>().HaveConversion<string>().HaveMaxLength(20);
     }
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -49,6 +50,9 @@ public sealed class FolioDbContext(DbContextOptions<FolioDbContext> options, ICu
             e.Property(p => p.Name).HasMaxLength(100);
             e.Property(p => p.BaseCurrency).HasMaxLength(3);
             e.Property(p => p.Description).HasMaxLength(500);
+            e.Property(p => p.Country).HasMaxLength(2);
+            // Portfolios from before the column existed are investment accounts.
+            e.Property(p => p.Kind).HasDefaultValue(PortfolioKind.Investment);
             e.HasIndex(p => p.OwnerId);
             e.HasOne<AppUser>().WithMany().HasForeignKey(p => p.OwnerId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(p => p.Transactions).WithOne().HasForeignKey(t => t.PortfolioId).OnDelete(DeleteBehavior.Cascade);

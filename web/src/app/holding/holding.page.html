@@ -38,7 +38,9 @@
 
   <section class="quote">
     <span class="price">{{ d.security.lastPrice | price: d.security.currency }}</span>
-    <app-change [percent]="d.security.dayChangePercent" />
+    @if (auth.showGains()) {
+      <app-change [percent]="d.security.dayChangePercent" />
+    }
     <span class="muted">Close on {{ d.security.lastPriceDate | day: 'weekday' }}</span>
   </section>
 
@@ -69,10 +71,12 @@
         <dt>Market value</dt>
         <dd class="num">{{ h.marketValue | money: d.baseCurrency }}</dd>
       </div>
-      <div>
-        <dt>Unrealized gain</dt>
-        <dd><app-change [amount]="h.unrealizedGain" [percent]="h.unrealizedGainPercent" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
-      </div>
+      @if (auth.showGains()) {
+        <div>
+          <dt>Unrealized gain</dt>
+          <dd><app-change [amount]="h.unrealizedGain" [percent]="h.unrealizedGainPercent" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
+        </div>
+      }
       <div>
         <dt>Share of portfolio</dt>
         <dd class="num">{{ h.weight | pct: false : 1 }}</dd>
@@ -83,10 +87,12 @@
         <dd>None held now</dd>
       </div>
     }
-    <div>
-      <dt>Realized gain</dt>
-      <dd><app-change [amount]="d.realizedGain" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
-    </div>
+    @if (auth.showGains()) {
+      <div>
+        <dt>Realized gain</dt>
+        <dd><app-change [amount]="d.realizedGain" [currency]="d.baseCurrency" [showArrow]="false" /></dd>
+      </div>
+    }
     <div>
       <dt>Dividends</dt>
       <dd class="num">{{ d.dividends | money: d.baseCurrency }}</dd>
@@ -98,5 +104,5 @@
     <app-transactions-table [transactions]="d.transactions" (edit)="edit($event)" (remove)="remove($event)" />
   </section>
 } @else {
-  <p class="muted state">Loading…</p>
+  <app-busy label="Loading the holding…" />
 }

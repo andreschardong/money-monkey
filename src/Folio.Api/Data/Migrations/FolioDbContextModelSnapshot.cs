@@ -17,7 +17,7 @@ namespace Folio.Api.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -49,6 +49,10 @@ namespace Folio.Api.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
+
+                    b.Property<bool>("HideGains")
+                        .HasColumnType("boolean")
+                        .HasColumnName("hide_gains");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
@@ -300,6 +304,11 @@ namespace Folio.Api.Data.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("base_currency");
 
+                    b.Property<string>("Country")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("country");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -308,6 +317,14 @@ namespace Folio.Api.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("description");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Investment")
+                        .HasColumnName("kind");
 
                     b.Property<string>("Name")
                         .IsRequired()

@@ -12,9 +12,17 @@
 } @else if (detail(); as d) {
   <header class="header">
     <div class="identity">
-      <h1>{{ d.summary.name }} <span class="currency-code">{{ d.summary.baseCurrency }}</span></h1>
+      <h1>
+        {{ d.summary.name }} <span class="currency-code">{{ d.summary.baseCurrency }}</span>
+        @if (d.summary.kind === 'RealEstate') {
+          <span class="currency-code" data-testid="kind">Real estate</span>
+        }
+      </h1>
       @if (d.summary.description) {
         <p class="description">{{ d.summary.description }}</p>
+      }
+      @if (d.summary.country) {
+        <p class="country muted" data-testid="country">{{ countryName(d.summary.country) }}</p>
       }
       @if (d.summary.access !== 'Owner') {
         <p class="access" data-testid="access">
@@ -55,25 +63,27 @@
   <section class="hero">
     <app-hero-figure [value]="d.summary.totalValue" [currency]="d.summary.baseCurrency" />
     <dl class="facts">
-      <div>
-        <dt>{{ dayLabel(d.summary.dayChangeDate) }}</dt>
-        <dd><app-change [amount]="d.summary.dayChange" [percent]="d.summary.dayChangePercent" [currency]="d.summary.baseCurrency" /></dd>
-      </div>
-      <div>
-        <dt>Total return</dt>
-        <dd>
-          @if (d.summary.totalReturn !== null) {
-            <app-change [amount]="d.summary.totalReturn" [percent]="d.summary.totalReturnPercent" [currency]="d.summary.baseCurrency" />
-          } @else {
-            <span class="muted">Record a deposit to track</span>
-          }
-        </dd>
-      </div>
-      @if (d.summary.annualizedReturn !== null) {
+      @if (auth.showGains()) {
         <div>
-          <dt>Per year, money-weighted</dt>
-          <dd><app-change [percent]="d.summary.annualizedReturn" [showArrow]="false" /></dd>
+          <dt>{{ dayLabel(d.summary.dayChangeDate) }}</dt>
+          <dd><app-change [amount]="d.summary.dayChange" [percent]="d.summary.dayChangePercent" [currency]="d.summary.baseCurrency" /></dd>
         </div>
+        <div>
+          <dt>Total return</dt>
+          <dd>
+            @if (d.summary.totalReturn !== null) {
+              <app-change [amount]="d.summary.totalReturn" [percent]="d.summary.totalReturnPercent" [currency]="d.summary.baseCurrency" />
+            } @else {
+              <span class="muted">Record a deposit to track</span>
+            }
+          </dd>
+        </div>
+        @if (d.summary.annualizedReturn !== null) {
+          <div>
+            <dt>Per year, money-weighted</dt>
+            <dd><app-change [percent]="d.summary.annualizedReturn" [showArrow]="false" /></dd>
+          </div>
+        }
       }
       <div>
         <dt>Net deposits</dt>
@@ -119,14 +129,16 @@
       <dt>Book value</dt>
       <dd class="num">{{ d.costBasis | money: d.summary.baseCurrency }}</dd>
     </div>
-    <div>
-      <dt>Unrealized gain</dt>
-      <dd><app-change [amount]="d.unrealizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
-    </div>
-    <div>
-      <dt>Realized gain</dt>
-      <dd><app-change [amount]="d.realizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
-    </div>
+    @if (auth.showGains()) {
+      <div>
+        <dt>Unrealized gain</dt>
+        <dd><app-change [amount]="d.unrealizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
+      </div>
+      <div>
+        <dt>Realized gain</dt>
+        <dd><app-change [amount]="d.realizedGain" [currency]="d.summary.baseCurrency" [showArrow]="false" /></dd>
+      </div>
+    }
     <div>
       <dt>Dividends and interest</dt>
       <dd class="num">{{ d.dividends + d.interest | money: d.summary.baseCurrency }}</dd>
@@ -164,15 +176,15 @@
           (remove)="deleteTransaction($event)" />
       </mat-tab>
       <mat-tab>
-        <ng-template mat-tab-label>Income<span class="long"> and gains</span></ng-template>
+        <ng-template mat-tab-label>Income@if (auth.showGains()) {<span class="long"> and gains</span>}</ng-template>
         @if (realized(); as r) {
           <app-income-panel [report]="r" />
         } @else {
-          <p class="muted loading">Loading…</p>
+          <app-busy label="Loading…" inline />
         }
       </mat-tab>
     </mat-tab-group>
   </section>
 } @else {
-  <p class="muted state">Loading the portfolio…</p>
+  <app-busy label="Loading the portfolio…" />
 }

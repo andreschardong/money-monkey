@@ -5,17 +5,19 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Api, problemMessage } from '../core/api';
 import { Auth, passkeyErrorMessage } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { ImportResult, Passkey } from '../core/models';
 import { PortfolioList, VersionStore } from '../core/stores';
+import { Busy } from '../shared/busy';
 import { confirm } from '../shared/confirm-dialog';
 
 @Component({
   selector: 'app-account-page',
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIcon, ...FORMAT_PIPES],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIcon, MatSlideToggle, Busy, ...FORMAT_PIPES],
   templateUrl: './account.page.html',
   styleUrl: './account.page.scss',
 })
@@ -34,9 +36,22 @@ export class AccountPage {
   protected readonly importing = signal(false);
   protected readonly importResult = signal<ImportResult | null>(null);
   protected readonly importError = signal<string | null>(null);
+  protected readonly savingDisplay = signal(false);
 
   constructor() {
     void this.load();
+  }
+
+  protected async setShowGains(show: boolean): Promise<void> {
+    this.savingDisplay.set(true);
+    try {
+      await this.auth.setHideGains(!show);
+      this.snack.open(show ? 'Gains and losses are shown again.' : 'Gains and losses are hidden on every page.');
+    } catch (error) {
+      this.snack.open(problemMessage(error), 'Close');
+    } finally {
+      this.savingDisplay.set(false);
+    }
   }
 
   protected async addPasskey(): Promise<void> {

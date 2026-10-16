@@ -1,6 +1,7 @@
 using Folio.Api.Auth;
 using Folio.Api.Data;
 using Folio.Api.MarketData;
+using Folio.Api.Portfolios;
 using Folio.Core;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,9 @@ public static class ImportEndpoints
             if (existingNames.Contains(name))
                 name = $"{name} (imported)";
             existingNames.Add(name);
+            var country = Countries.Normalize(source.Country);
+            if (!Countries.IsCode(country))
+                return Problems.BadRequest($"Portfolio \"{source.Name}\": {Countries.Invalid}");
 
             var portfolio = new Portfolio
             {
@@ -55,6 +59,8 @@ public static class ImportEndpoints
                 Name = name,
                 BaseCurrency = Currencies.Normalize(source.BaseCurrency),
                 Description = string.IsNullOrWhiteSpace(source.Description) ? null : source.Description.Trim(),
+                Country = country,
+                Kind = Enum.IsDefined(source.Kind) ? source.Kind : PortfolioKind.Investment,
                 CreatedAt = now,
                 UpdatedAt = now,
             };

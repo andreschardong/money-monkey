@@ -34,7 +34,9 @@
             <th class="right" appSort="value" [sort]="sort" defaultDirection="desc">Value</th>
             @if (hasContributions()) {
               <th class="right" appSort="netContributions" [sort]="sort" defaultDirection="desc">Net deposits</th>
-              <th class="right" appSort="earned" [sort]="sort" defaultDirection="desc">Earned</th>
+              @if (auth.showGains()) {
+                <th class="right" appSort="earned" [sort]="sort" defaultDirection="desc">Earned</th>
+              }
             }
           </tr>
         </thead>
@@ -45,9 +47,11 @@
               <td class="right num">{{ row.value | money: currency() }}</td>
               @if (hasContributions()) {
                 <td class="right num">{{ row.netContributions | money: currency() }}</td>
-                <td class="right num" [class.gain]="row.value > row.netContributions" [class.loss]="row.value < row.netContributions">
-                  {{ row.value - row.netContributions | money: currency() : true }}
-                </td>
+                @if (auth.showGains()) {
+                  <td class="right num" [class.gain]="row.value > row.netContributions" [class.loss]="row.value < row.netContributions">
+                    {{ row.value - row.netContributions | money: currency() : true }}
+                  </td>
+                }
               }
             </tr>
           }

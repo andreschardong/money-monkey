@@ -7,6 +7,9 @@ namespace Folio.Api.Auth;
 public sealed class AppUser : IdentityUser
 {
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Values and prices only: no gains, losses or day changes anywhere. Saved here so every device agrees.</summary>
+    public bool HideGains { get; set; }
 }
 
 public enum EmailLinkPurpose

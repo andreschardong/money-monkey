@@ -312,6 +312,76 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
         Assert.Contains("SHOP.TO", status.LastRun.Log);
     }
 
+    [Fact]
+    public async Task A_portfolio_may_belong_to_a_country_and_the_overview_sums_by_country()
+    {
+        var created = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("TFSA", "CAD", null, " ca "), Json, Ct);
+        created.EnsureSuccessStatusCode();
+        var tfsa = (await created.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!;
+        Assert.Equal("CA", tfsa.Country);
+        var rrsp = await CreatePortfolioAsync("CAD");
+        var usa = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("Brokerage", "USD", null, "US"), Json, Ct);
+        usa.EnsureSuccessStatusCode();
+        var brokerage = (await usa.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!.Id;
+        await SetCashAsync(tfsa.Id, "CAD", 700m);
+        await SetCashAsync(rrsp, "CAD", 300m);
+        await SetCashAsync(brokerage, "USD", 500m);
+
+        // The RRSP gets its country afterwards, through an edit.
+        var renamed = await _client.PutAsJsonAsync($"/api/portfolios/{rrsp}", new UpdatePortfolioRequest("RRSP", "CAD", null, "CA"), Json, Ct);
+        renamed.EnsureSuccessStatusCode();
+        Assert.Equal("CA", (await renamed.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!.Country);
+
+        var overview = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        var byCountry = overview.ByCountry.ToDictionary(a => a.Key);
+        Assert.Equal(1_000m, byCountry["CA"].Value);
+        Assert.Equal(700m, byCountry["US"].Value); // US$500 at 1.40
+        Assert.Equal(1_000m / 1_700m, byCountry["CA"].Weight, 5);
+        Assert.Equal("CA", overview.Portfolios.Single(p => p.Id == rrsp).Country);
+        Assert.Equal("CA", (await GetAsync<ExportDto>("/api/export")).Portfolios.Single(p => p.Id == tfsa.Id).Country);
+
+        // A portfolio without a country is summed as "Not set"; a name instead of a code is refused.
+        var other = await CreatePortfolioAsync("CAD");
+        await SetCashAsync(other, "CAD", 50m);
+        overview = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        Assert.Equal(50m, overview.ByCountry.Single(a => a.Key == "").Value);
+        Assert.Equal("Not set", overview.ByCountry.Single(a => a.Key == "").Label);
+        var refused = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest("Bad", "CAD", null, "Canada"), Json, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_real_estate_portfolio_can_be_left_out_of_the_overview()
+    {
+        var savings = await CreatePortfolioAsync("CAD");
+        await SetCashAsync(savings, "CAD", 1_000m, D("2026-09-01"));
+        var created = await _client.PostAsJsonAsync("/api/portfolios",
+            new CreatePortfolioRequest("Apartment", "CAD", null, "BR", PortfolioKind.RealEstate), Json, Ct);
+        created.EnsureSuccessStatusCode();
+        var home = (await created.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!;
+        Assert.Equal(PortfolioKind.RealEstate, home.Kind);
+        var security = await _client.PostAsJsonAsync("/api/securities/manual",
+            new ManualSecurityRequest("APT-SP", "Apartment in São Paulo", "CAD", AssetType.Other, 500_000m, D("2026-10-01")), Json, Ct);
+        security.EnsureSuccessStatusCode();
+        var apartment = (await security.Content.ReadFromJsonAsync<SecurityDto>(Json, Ct))!.Id;
+        await AddAsync(home.Id, new TransactionRequest(TransactionType.Buy, D("2026-10-01"), SecurityId: apartment, Quantity: 1m, Price: 500_000m));
+
+        var everything = await GetAsync<OverviewDto>("/api/overview?currency=CAD");
+        Assert.Equal(501_000m, everything.TotalValue);
+        Assert.Contains(everything.Portfolios, p => p.Id == home.Id && p.Kind == PortfolioKind.RealEstate);
+        Assert.Equal(500_000m, everything.ByAssetType.Single(a => a.Key == "RealEstate").Value);
+        Assert.Equal("Real estate", everything.ByAssetType.Single(a => a.Key == "RealEstate").Label);
+
+        var liquid = await GetAsync<OverviewDto>("/api/overview?currency=CAD&excludeRealEstate=true");
+        Assert.Equal(1_000m, liquid.TotalValue);
+        Assert.DoesNotContain(liquid.Portfolios, p => p.Id == home.Id);
+        Assert.DoesNotContain(liquid.ByAssetType, a => a.Key == "RealEstate");
+
+        var history = await GetAsync<HistoryDto>("/api/overview/history?currency=CAD&range=1M&excludeRealEstate=true");
+        Assert.Equal(1_000m, history.Points[^1].Value);
+        Assert.Equal(PortfolioKind.RealEstate, (await GetAsync<ExportDto>("/api/export")).Portfolios.Single(p => p.Id == home.Id).Kind);
+    }
+
     private static DateOnly D(string iso) => DateOnly.Parse(iso, System.Globalization.CultureInfo.InvariantCulture);
 
     private async Task<Guid> CreatePortfolioAsync(string currency)

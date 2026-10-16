@@ -4,9 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIcon } from '@angular/material/icon';
 import { Router, RouterLink } from '@angular/router';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES, formatMoney, formatQuantity, sessionLabel } from '../core/format';
 import { AssetCash, AssetHolding, Assets, IsoDate, PORTFOLIO_CURRENCIES } from '../core/models';
 import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../core/stores';
+import { Busy } from '../shared/busy';
 import { Change } from '../shared/change';
 import { HeroFigure } from '../shared/hero-figure';
 import { SortHeader, TableSort } from '../shared/table-sort';
@@ -14,7 +16,7 @@ import { SortHeader, TableSort } from '../shared/table-sort';
 /** Everything held across all portfolios: one line per security and per cash currency. */
 @Component({
   selector: 'app-assets-page',
-  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, Change, HeroFigure, SortHeader, ...FORMAT_PIPES],
+  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatIcon, Busy, Change, HeroFigure, SortHeader, ...FORMAT_PIPES],
   templateUrl: './assets.page.html',
   styleUrl: './assets.page.scss',
 })
@@ -22,6 +24,7 @@ export class AssetsPage {
   private readonly router = inject(Router);
   private readonly list = inject(PortfolioList);
   protected readonly display = inject(DisplayCurrency);
+  protected readonly auth = inject(Auth);
   private readonly marketStatus = inject(MarketStatusStore);
   protected readonly currencies = PORTFOLIO_CURRENCIES;
 

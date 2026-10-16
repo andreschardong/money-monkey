@@ -4,17 +4,19 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIcon } from '@angular/material/icon';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { HoldingDetail, PricePoint, Range, Transaction } from '../core/models';
 import { PortfolioList } from '../core/stores';
 import { TransactionsTable } from '../portfolio/transactions-table';
+import { Busy } from '../shared/busy';
 import { Change } from '../shared/change';
 import { TransactionCommands } from '../transactions/transaction-commands';
 import { PriceChart } from './price-chart';
 
 @Component({
   selector: 'app-holding-page',
-  imports: [RouterLink, MatButtonModule, MatIcon, Change, PriceChart, TransactionsTable, ...FORMAT_PIPES],
+  imports: [RouterLink, MatButtonModule, MatIcon, Busy, Change, PriceChart, TransactionsTable, ...FORMAT_PIPES],
   templateUrl: './holding.page.html',
   styleUrl: './holding.page.scss',
 })
@@ -22,6 +24,7 @@ export class HoldingPage {
   private readonly commands = inject(TransactionCommands);
   private readonly list = inject(PortfolioList);
   private readonly title = inject(Title);
+  protected readonly auth = inject(Auth);
 
   readonly id = input.required<string>();
   readonly securityId = input.required<string>();
