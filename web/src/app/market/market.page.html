@@ -105,7 +105,9 @@
             <th class="hide-s" appSort="name" [sort]="securitySort">Name</th>
             <th class="hide-s" appSort="exchange" [sort]="securitySort">Exchange</th>
             <th class="right" appSort="lastPrice" [sort]="securitySort" defaultDirection="desc">Last close</th>
-            <th class="right" appSort="change" [sort]="securitySort" defaultDirection="desc">Change</th>
+            @if (auth.showGains()) {
+              <th class="right" appSort="change" [sort]="securitySort" defaultDirection="desc">Change</th>
+            }
             <th class="date hide-s" appSort="date" [sort]="securitySort" defaultDirection="desc">Date</th>
             <th class="hide-s" appSort="source" [sort]="securitySort">Source</th>
             <th><span class="visually-hidden">Actions</span></th>
@@ -118,7 +120,9 @@
               <td class="hide-s name">{{ s.name }}</td>
               <td class="hide-s muted">{{ s.exchange ?? '—' }}</td>
               <td class="right num">{{ s.lastPrice | price: s.currency }}</td>
-              <td class="right"><app-change [percent]="s.dayChangePercent" [showArrow]="false" /></td>
+              @if (auth.showGains()) {
+                <td class="right"><app-change [percent]="s.dayChangePercent" [showArrow]="false" /></td>
+              }
               <td class="num date hide-s">{{ s.lastPriceDate | day: 'short' }}</td>
               <td class="hide-s">
                 @if (s.lastRefreshError) {

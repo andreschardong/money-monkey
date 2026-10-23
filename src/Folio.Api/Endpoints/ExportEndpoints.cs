@@ -36,7 +36,8 @@ public static class ExportEndpoints
             transactions.Where(t => t.PortfolioId == p.Id).Select(t => new ExportTransactionDto(
                 t.Date, t.Type, t.Security?.Symbol, t.Security?.Name, t.Security?.PriceSource.ToString(), t.Currency, t.Quantity, t.Price, t.Amount, t.Fee,
                 t.FxRate, t.SplitFrom, t.SplitTo, t.Note)).ToList(),
-            cash.Where(c => c.PortfolioId == p.Id).Select(c => new CashEntryDto(c.Currency, c.Date, c.Balance, c.Note)).ToList())).ToList());
+            cash.Where(c => c.PortfolioId == p.Id).Select(c => new CashEntryDto(c.Currency, c.Date, c.Balance, c.Note)).ToList(),
+            p.Country, p.Kind)).ToList());
         return TypedResults.Ok(export);
     }
 

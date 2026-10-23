@@ -3,6 +3,7 @@ import { Component, computed, effect, inject, input, linkedSignal, signal, untra
 import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Api, problemMessage } from '../core/api';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { CorporateAction, PricePoint, Range, Security, Transaction } from '../core/models';
 import { PriceChart } from '../holding/price-chart';
@@ -28,6 +29,7 @@ export class QuotesPage {
   private readonly api = inject(Api);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly auth = inject(Auth);
 
   /** From the address bar (?symbol=SHOP.TO), so a quote can be linked to. */
   readonly symbol = input<string>();

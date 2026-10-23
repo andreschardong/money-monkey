@@ -1,11 +1,11 @@
 import { HttpClient, HttpErrorResponse, HttpInterceptorFn, httpResource } from '@angular/common/http';
 import { Injectable, computed, inject } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { CanActivateFn, Router } from '@angular/router';
-import { catchError, filter, firstValueFrom, throwError } from 'rxjs';
+import { catchError, filter, firstValueFrom, map, throwError } from 'rxjs';
 import { EmailLinkSent, Me, Passkey } from './models';
 
-const SIGNED_OUT: Me = { signedIn: false, email: null, passkeys: 0, inboxUrl: null, publicUrl: '' };
+const SIGNED_OUT: Me = { signedIn: false, email: null, passkeys: 0, inboxUrl: null, publicUrl: '', hideGains: false };
 
 /** Who is signed in, plus the passkey and email-link ceremonies. */
 @Injectable({ providedIn: 'root' })
@@ -18,9 +18,15 @@ export class Auth {
   readonly email = computed(() => (this.me.hasValue() ? this.me.value().email : null));
   readonly inboxUrl = computed(() => (this.me.hasValue() ? this.me.value().inboxUrl : null));
   readonly publicUrl = computed(() => (this.me.hasValue() ? this.me.value().publicUrl : ''));
+  /** The account's choice to see values and prices without any gain, loss or change figure. */
+  readonly hideGains = computed(() => this.me.hasValue() && this.me.value().hideGains);
+  readonly showGains = computed(() => !this.hideGains());
 
   private readonly settled$ = toObservable(this.me.status).pipe(
     filter(status => status === 'resolved' || status === 'error' || status === 'local'));
+
+  /** True once the first "who am I" request has answered, or failed; the shell shows a spinner until then. */
+  readonly settled = toSignal(this.settled$.pipe(map(() => true)), { initialValue: false });
 
   /** Passkeys need a secure context (https, or localhost) and a browser with the WebAuthn JSON helpers. */
   readonly passkeysSupported =
@@ -39,6 +45,11 @@ export class Auth {
     const me = await firstValueFrom(this.http.post<Me>('/api/auth/email-link/verify', { token, confirmSwitch }));
     this.me.set(me);
     return me;
+  }
+
+  /** Display choices are saved on the account, so the phone and the PC agree. */
+  async setHideGains(hideGains: boolean): Promise<void> {
+    this.me.set(await firstValueFrom(this.http.put<Me>('/api/account/preferences', { hideGains })));
   }
 
   /** Ends the session on every device, this one included. */

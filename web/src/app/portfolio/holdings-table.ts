@@ -1,6 +1,7 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { MatTooltip } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
+import { Auth } from '../core/auth';
 import { FORMAT_PIPES } from '../core/format';
 import { CashBalance, Currency, Holding, PortfolioSummary } from '../core/models';
 import { Change } from '../shared/change';
@@ -12,10 +13,18 @@ import { SortHeader, TableSort } from '../shared/table-sort';
   template: `
     @if (holdings().length === 0 && cash().length === 0) {
       <div class="empty">
-        <p>No holdings yet. Record a buy, or a transfer in for shares you already own, and enter the cash in the account.</p>
+        @if (summary().kind === 'RealEstate') {
+          <p>No properties yet. Add one with what you paid and what it is worth now, and enter any cash in the account.</p>
+        } @else {
+          <p>No holdings yet. Record a buy, or a transfer in for shares you already own, and enter the cash in the account.</p>
+        }
         @if (!readonly()) {
           <div class="links">
-            <button type="button" class="link" (click)="add.emit()">Add a transaction</button>
+            @if (summary().kind === 'RealEstate') {
+              <button type="button" class="link" (click)="addProperty.emit()">Add a property</button>
+            } @else {
+              <button type="button" class="link" (click)="add.emit()">Add a transaction</button>
+            }
             <button type="button" class="link" (click)="editCash.emit(null)">Set cash balance</button>
           </div>
         }
@@ -30,7 +39,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
               <th class="right hide-m" appSort="averageCost" [sort]="sort" defaultDirection="desc">Average cost</th>
               <th class="right hide-s" appSort="price" [sort]="sort" defaultDirection="desc">Price</th>
               <th class="right" appSort="marketValue" [sort]="sort" defaultDirection="desc">Market value</th>
-              <th class="right" appSort="unrealizedGain" [sort]="sort" defaultDirection="desc">Unrealized gain</th>
+              @if (auth.showGains()) {
+                <th class="right" appSort="unrealizedGain" [sort]="sort" defaultDirection="desc">Unrealized gain</th>
+              }
               <th class="right hide-m" appSort="weight" [sort]="sort" defaultDirection="desc">Weight</th>
             </tr>
           </thead>
@@ -40,7 +51,11 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                 <td>
                   <a class="ticker" [routerLink]="['holdings', h.securityId]" (click)="$event.stopPropagation()">{{ h.symbol }}</a>
                   <div class="name muted">{{ h.name }}</div>
-                  <div class="compact muted">{{ h.quantity | qty }} shares at {{ h.price ?? h.averageCost | price: h.currency }}</div>
+                  @if (h.assetType === 'RealEstate' && h.quantity === 1) {
+                    <div class="compact muted">Property</div>
+                  } @else {
+                    <div class="compact muted">{{ h.quantity | qty }} shares at {{ h.price ?? h.averageCost | price: h.currency }}</div>
+                  }
                 </td>
                 <td class="right num hide-s">{{ h.quantity | qty }}</td>
                 <td class="right num hide-m">{{ h.averageCost | price: h.currency }}</td>
@@ -49,7 +64,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                     <span class="muted" matTooltip="No price yet; shown at cost">—</span>
                   } @else {
                     {{ h.price | price: h.currency }}
-                    <div class="small"><app-change [percent]="h.dayChangePercent" [showArrow]="false" /></div>
+                    @if (auth.showGains()) {
+                      <div class="small"><app-change [percent]="h.dayChangePercent" [showArrow]="false" /></div>
+                    }
                   }
                 </td>
                 <td class="right num">
@@ -58,10 +75,12 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                     <div class="small muted local">{{ h.marketValueLocal | money: h.currency }}</div>
                   }
                 </td>
-                <td class="right">
-                  <app-change [amount]="h.unrealizedGain" [currency]="summary().baseCurrency" [showArrow]="false" />
-                  <div class="small"><app-change [percent]="h.unrealizedGainPercent" [showArrow]="false" /></div>
-                </td>
+                @if (auth.showGains()) {
+                  <td class="right">
+                    <app-change [amount]="h.unrealizedGain" [currency]="summary().baseCurrency" [showArrow]="false" />
+                    <div class="small"><app-change [percent]="h.unrealizedGainPercent" [showArrow]="false" /></div>
+                  </td>
+                }
                 <td class="right num hide-m">{{ h.weight | pct: false : 1 }}</td>
               </tr>
             }
@@ -88,13 +107,15 @@ import { SortHeader, TableSort } from '../shared/table-sort';
                     <div class="small muted">{{ c.balance | money: c.currency }}</div>
                   }
                 </td>
-                <td></td>
+                @if (auth.showGains()) {
+                  <td></td>
+                }
                 <td class="hide-m"></td>
               </tr>
             }
             @if (cash().length === 0) {
               <tr class="cash">
-                <td colspan="7">
+                <td [attr.colspan]="auth.showGains() ? 7 : 6">
                   <span class="cash-label">Cash</span>
                   <span class="muted">not entered yet.</span>
                   @if (!readonly()) {
@@ -111,7 +132,9 @@ import { SortHeader, TableSort } from '../shared/table-sort';
               <td class="hide-m"></td>
               <td class="hide-s"></td>
               <td class="right num">{{ summary().totalValue | money: summary().baseCurrency }}</td>
-              <td class="right"><app-change [amount]="unrealized()" [currency]="summary().baseCurrency" [showArrow]="false" /></td>
+              @if (auth.showGains()) {
+                <td class="right"><app-change [amount]="unrealized()" [currency]="summary().baseCurrency" [showArrow]="false" /></td>
+              }
               <td class="hide-m"></td>
             </tr>
           </tfoot>
@@ -151,8 +174,10 @@ export class HoldingsTable {
   readonly readonly = input(false);
   readonly open = output<string>();
   readonly add = output<void>();
+  readonly addProperty = output<void>();
   readonly editCash = output<Currency | null>();
 
+  protected readonly auth = inject(Auth);
   protected readonly sort = new TableSort({ key: 'marketValue', direction: 'desc' });
   protected readonly sortedHoldings = computed(() => this.sort.apply(this.holdings(), {
     symbol: h => h.symbol,

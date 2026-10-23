@@ -10,8 +10,13 @@ using Microsoft.Extensions.Options;
 
 namespace Folio.Api.Auth;
 
-/// <summary>PublicUrl is where Money Monkey is set up to be opened; passkeys work only at that address (or on localhost).</summary>
-public sealed record MeDto(bool SignedIn, string? Email, int Passkeys, string? InboxUrl, string PublicUrl);
+/// <summary>
+/// PublicUrl is where Money Monkey is set up to be opened; passkeys work only at that address (or on localhost).
+/// HideGains is the account's choice to see values and prices without any gain, loss or change figure.
+/// </summary>
+public sealed record MeDto(bool SignedIn, string? Email, int Passkeys, string? InboxUrl, string PublicUrl, bool HideGains = false);
+
+public sealed record PreferencesRequest(bool HideGains);
 
 public sealed record EmailLinkRequest(string Email);
 
@@ -50,6 +55,7 @@ public static class AuthEndpoints
         account.MapPost("/passkeys", AddPasskey);
         account.MapDelete("/passkeys/{id}", RemovePasskey);
         account.MapPost("/sign-out-everywhere", SignOutEverywhere);
+        account.MapPut("/preferences", SetPreferences);
     }
 
     private static async Task<MeDto> Me(HttpContext http, UserManager<AppUser> users, IOptions<AuthOptions> options)
@@ -57,8 +63,11 @@ public static class AuthEndpoints
         var user = http.User.Identity?.IsAuthenticated == true ? await users.GetUserAsync(http.User) : null;
         return user is null
             ? new MeDto(false, null, 0, options.Value.InboxUrl, options.Value.PublicUrl)
-            : new MeDto(true, user.Email, (await users.GetPasskeysAsync(user)).Count, options.Value.InboxUrl, options.Value.PublicUrl);
+            : await SignedInAsync(users, user, options.Value);
     }
+
+    private static async Task<MeDto> SignedInAsync(UserManager<AppUser> users, AppUser user, AuthOptions options) =>
+        new(true, user.Email, (await users.GetPasskeysAsync(user)).Count, options.InboxUrl, options.PublicUrl, user.HideGains);
 
     private static async Task<Results<Accepted<EmailLinkSentDto>, ProblemHttpResult>> SendEmailLink(
         EmailLinkRequest request, UserManager<AppUser> users, EmailLinkService links, IOptionsMonitor<AuthOptions> options,
@@ -123,7 +132,7 @@ public static class AuthEndpoints
         }
 
         await signIn.SignInAsync(user, isPersistent: true, authenticationMethod: "email-link");
-        return TypedResults.Ok(new MeDto(true, user.Email, (await users.GetPasskeysAsync(user)).Count, options.Value.InboxUrl, options.Value.PublicUrl));
+        return TypedResults.Ok(await SignedInAsync(users, user, options.Value));
     }
 
     private static async Task<ContentHttpResult> PasskeyRequestOptions(SignInManager<AppUser> signIn) =>
@@ -157,7 +166,7 @@ public static class AuthEndpoints
         // The sign count and backup flags change with each use; storing them guards against cloned authenticators.
         await users.AddOrUpdatePasskeyAsync(user, assertion.Passkey);
         await signIn.SignInAsync(user, isPersistent: true, authenticationMethod: "passkey");
-        return TypedResults.Ok(new MeDto(true, user.Email, (await users.GetPasskeysAsync(user)).Count, options.CurrentValue.InboxUrl, options.CurrentValue.PublicUrl));
+        return TypedResults.Ok(await SignedInAsync(users, user, options.CurrentValue));
     }
 
     private static async Task<NoContent> SignOut(SignInManager<AppUser> signIn)
@@ -254,6 +263,22 @@ public static class AuthEndpoints
         await users.UpdateSecurityStampAsync(user);
         await signIn.SignOutAsync();
         return TypedResults.NoContent();
+    }
+
+    /// <summary>Display choices live on the account rather than in one browser, so the phone and the PC agree.</summary>
+    private static async Task<Results<Ok<MeDto>, UnauthorizedHttpResult, ProblemHttpResult>> SetPreferences(
+        PreferencesRequest request, HttpContext http, UserManager<AppUser> users, IOptions<AuthOptions> options)
+    {
+        var user = await users.GetUserAsync(http.User);
+        if (user is null)
+            return TypedResults.Unauthorized();
+
+        user.HideGains = request.HideGains;
+        var saved = await users.UpdateAsync(user);
+        if (!saved.Succeeded)
+            return Problems.BadRequest(string.Join(" ", saved.Errors.Select(e => e.Description)));
+
+        return TypedResults.Ok(await SignedInAsync(users, user, options.Value));
     }
 
     private static async Task<List<PasskeyDto>> PasskeysAsync(UserManager<AppUser> users, AppUser user) =>

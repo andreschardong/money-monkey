@@ -31,7 +31,9 @@ public static class PortfolioMapper
             snapshot.Access.Access,
             snapshot.Access.OwnerEmail,
             snapshot.Access.SharedWith,
-            v.DayChangeDate);
+            v.DayChangeDate,
+            portfolio.Country,
+            portfolio.Kind);
     }
 
     public static PortfolioDetailDto ToDetail(PortfolioSnapshot snapshot)

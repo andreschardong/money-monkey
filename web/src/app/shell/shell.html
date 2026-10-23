@@ -83,6 +83,9 @@
   }
 
   <mat-sidenav-content class="content" [class.bare]="!auth.signedIn()">
+    @if (navigating()) {
+      <mat-progress-bar class="nav-progress" mode="indeterminate" aria-label="Loading the page" />
+    }
     @if (auth.signedIn()) {
       @if (!wide()) {
         <header class="topbar">
@@ -98,6 +101,9 @@
       </button>
     }
     <main>
+      @if (!auth.settled()) {
+        <app-busy label="Loading Money Monkey…" />
+      }
       <router-outlet />
     </main>
   </mat-sidenav-content>

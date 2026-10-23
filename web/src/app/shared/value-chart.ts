@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { Auth } from '../core/auth';
 import { compactAxisFormatter, formatDate, formatMoney, FORMAT_PIPES } from '../core/format';
 import { Currency, HistoryPoint, Range } from '../core/models';
 import { Theme } from '../core/theme';
@@ -30,6 +31,7 @@ export class ValueChart {
 
   protected readonly ranges = RANGES;
   protected readonly showTable = signal(false);
+  protected readonly auth = inject(Auth);
   private readonly theme = inject(Theme);
 
   /** Month-end rows (and the latest day) for the table view. */
@@ -58,6 +60,7 @@ export class ValueChart {
     const currency = this.currency();
     const points = this.points();
     const withDeposits = this.hasContributions();
+    const showGains = this.auth.showGains();
     const font = getComputedStyle(document.body).fontFamily;
     const axisLabel = compactAxisFormatter(
       withDeposits ? points.flatMap(p => [p.value, p.netContributions]) : points.map(p => p.value), currency);
@@ -93,10 +96,11 @@ export class ValueChart {
           if (!withDeposits) {
             return head;
           }
-          return head +
-            row(t.series[1], formatMoney(point.netContributions, currency), 'net deposits') +
-            `<div style="margin-top:6px;color:${gain >= 0 ? t.gain : t.loss};font-variant-numeric:tabular-nums">` +
-            `${formatMoney(gain, currency, { signed: true })} earned</div>`;
+          const earned = showGains
+            ? `<div style="margin-top:6px;color:${gain >= 0 ? t.gain : t.loss};font-variant-numeric:tabular-nums">` +
+              `${formatMoney(gain, currency, { signed: true })} earned</div>`
+            : '';
+          return head + row(t.series[1], formatMoney(point.netContributions, currency), 'net deposits') + earned;
         },
       },
       xAxis: {

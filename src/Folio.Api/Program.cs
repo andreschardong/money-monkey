@@ -294,6 +294,7 @@ api.MapImportEndpoints();
 api.MapShareEndpoints();
 api.MapPortfolioEndpoints();
 api.MapTransactionEndpoints();
+api.MapPropertyEndpoints();
 api.MapSecurityEndpoints();
 api.MapMarketEndpoints();
 
