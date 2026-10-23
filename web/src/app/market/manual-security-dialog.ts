@@ -29,7 +29,7 @@ const TYPES: readonly { value: AssetType; label: string }[] = [
   selector: 'app-manual-security-dialog',
   imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatDatepickerModule],
   template: `
-    <h2 mat-dialog-title>{{ security ? 'Update price of ' + security.symbol : 'Add a manually priced security' }}</h2>
+    <h2 mat-dialog-title>{{ security ? 'Update ' + word + ' of ' + security.symbol : 'Add a manually priced security' }}</h2>
     <form [formGroup]="form" (ngSubmit)="save()">
       <mat-dialog-content>
         @if (!security) {
@@ -63,7 +63,7 @@ const TYPES: readonly { value: AssetType; label: string }[] = [
         }
         <div class="grid">
           <mat-form-field>
-            <mat-label>Price per unit</mat-label>
+            <mat-label>{{ property ? 'Value' : 'Price per unit' }}</mat-label>
             <input matInput type="number" formControlName="price" min="0" step="any" inputmode="decimal">
           </mat-form-field>
           <mat-form-field>
@@ -79,7 +79,7 @@ const TYPES: readonly { value: AssetType; label: string }[] = [
       </mat-dialog-content>
       <mat-dialog-actions align="end">
         <button mat-button type="button" mat-dialog-close>Cancel</button>
-        <button mat-flat-button type="submit" [disabled]="saving()">{{ security ? 'Save price' : 'Add security' }}</button>
+        <button mat-flat-button type="submit" [disabled]="saving()">{{ security ? 'Save ' + word : 'Add security' }}</button>
       </mat-dialog-actions>
     </form>
   `,
@@ -97,6 +97,9 @@ export class ManualSecurityDialog {
   private readonly data = inject<ManualSecurityDialogData | null>(MAT_DIALOG_DATA, { optional: true });
 
   protected readonly security = this.data?.security;
+  /** A property has a value, not a price per unit. */
+  protected readonly property = this.security?.assetType === 'RealEstate';
+  protected readonly word = this.property ? 'value' : 'price';
   protected readonly currencies = CURRENCIES;
   protected readonly types = TYPES;
   protected readonly today = new Date();
@@ -114,7 +117,7 @@ export class ManualSecurityDialog {
 
   protected async save(): Promise<void> {
     if (this.form.invalid) {
-      this.error.set(this.security ? 'Enter a price greater than zero.' : 'Fill in the code, name and a price greater than zero.');
+      this.error.set(this.security ? `Enter a ${this.word} greater than zero.` : 'Fill in the code, name and a price greater than zero.');
       return;
     }
     const v = this.form.getRawValue();

@@ -25,6 +25,7 @@ import { HoldingsTable } from './holdings-table';
 import { IncomePanel } from './income-panel';
 import { CashDialog, CashDialogData } from './cash-dialog';
 import { PortfolioDialog } from './portfolio-dialog';
+import { PropertyDialog, PropertyDialogData } from './property-dialog';
 import { ShareDialog, ShareDialogData } from './share-dialog';
 import { TransactionsTable } from './transactions-table';
 
@@ -142,6 +143,22 @@ export class PortfolioPage {
 
   protected addTransaction(preset?: TransactionPreset): void {
     void this.openTransactionDialog({ preset });
+  }
+
+  protected addProperty(): void {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const data: PropertyDialogData = { portfolioId: this.id(), baseCurrency: detail.summary.baseCurrency };
+    this.dialog.open<PropertyDialog, PropertyDialogData, boolean>(PropertyDialog, { data, autoFocus: 'first-tabbable', maxWidth: '96vw' })
+      .afterClosed()
+      .subscribe(added => {
+        if (added) {
+          this.snack.open('Property added.');
+          this.refresh();
+        }
+      });
   }
 
   protected editTransaction(transaction: Transaction): void {

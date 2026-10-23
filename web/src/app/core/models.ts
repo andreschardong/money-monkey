@@ -14,7 +14,7 @@ export type TransactionType =
   | 'Fee'
   | 'TransferIn';
 
-export type AssetType = 'Stock' | 'Etf' | 'Fund' | 'Crypto' | 'Other';
+export type AssetType = 'Stock' | 'Etf' | 'Fund' | 'Crypto' | 'Other' | 'RealEstate';
 export type PriceSource = 'Yahoo' | 'Manual' | 'AlphaVantage';
 export type CorporateActionKind = 'Split' | 'Dividend';
 export type RefreshStatus = 'Running' | 'Succeeded' | 'PartiallySucceeded' | 'Failed';
@@ -157,6 +157,16 @@ export interface TransactionRequest {
   splitFrom?: number | null;
   splitTo?: number | null;
   note?: string | null;
+}
+
+/** A property bought on purchaseDate; currentValue is as of today. */
+export interface PropertyRequest {
+  name: string;
+  description: string | null;
+  purchaseDate: IsoDate;
+  purchasePrice: number;
+  closingCosts: number | null;
+  currentValue: number | null;
 }
 
 export interface HistoryPoint {

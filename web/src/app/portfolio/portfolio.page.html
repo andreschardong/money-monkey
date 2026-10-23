@@ -42,10 +42,21 @@
           <mat-icon svgIcon="account_balance_wallet" />
           Cash
         </button>
-        <button mat-flat-button (click)="addTransaction()">
-          <mat-icon svgIcon="add" />
-          Add transaction
-        </button>
+        @if (d.summary.kind === 'RealEstate') {
+          <button mat-stroked-button (click)="addTransaction()">
+            <mat-icon svgIcon="add" />
+            Add transaction
+          </button>
+          <button mat-flat-button (click)="addProperty()">
+            <mat-icon svgIcon="add_home" />
+            Add property
+          </button>
+        } @else {
+          <button mat-flat-button (click)="addTransaction()">
+            <mat-icon svgIcon="add" />
+            Add transaction
+          </button>
+        }
       }
       @if (isOwner()) {
         <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Portfolio options">
@@ -165,6 +176,7 @@
           [readonly]="!canEdit()"
           (open)="openHolding($event)"
           (add)="addTransaction()"
+          (addProperty)="addProperty()"
           (editCash)="editCash($event)" />
       </mat-tab>
       <mat-tab>

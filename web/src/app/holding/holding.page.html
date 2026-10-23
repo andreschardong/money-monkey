@@ -30,10 +30,18 @@
         <a [routerLink]="['/quotes']" [queryParams]="{ symbol: d.security.symbol }">Quote and history</a>
       </p>
     </div>
-    <button mat-flat-button (click)="add()">
-      <mat-icon svgIcon="add" />
-      Add transaction
-    </button>
+    <div class="actions">
+      @if (d.security.priceSource === 'Manual') {
+        <button mat-stroked-button (click)="updatePrice()">
+          <mat-icon svgIcon="price_change" />
+          {{ isProperty() ? 'Update value' : 'Update price' }}
+        </button>
+      }
+      <button mat-flat-button (click)="add()">
+        <mat-icon svgIcon="add" />
+        Add transaction
+      </button>
+    </div>
   </header>
 
   <section class="quote">
@@ -41,7 +49,7 @@
     @if (auth.showGains()) {
       <app-change [percent]="d.security.dayChangePercent" />
     }
-    <span class="muted">Close on {{ d.security.lastPriceDate | day: 'weekday' }}</span>
+    <span class="muted">{{ isProperty() ? 'Valued on' : 'Close on' }} {{ d.security.lastPriceDate | day: 'weekday' }}</span>
   </section>
 
   <section class="panel">

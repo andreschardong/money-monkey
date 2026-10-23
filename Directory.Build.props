@@ -6,6 +6,6 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <!-- The app's version, shown in the nav and on the Account page; the image build adds the commit. -->
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
   </PropertyGroup>
 </Project>

@@ -35,8 +35,8 @@ export interface PortfolioDialogData {
             }
           </mat-button-toggle-group>
           <p class="hint">
-            Real estate is a property you own, valued through a manually priced holding. The overview counts it by default
-            and can leave it out.
+            Real estate holds the properties you own: add each one with Add property, then update its value now and
+            then. The overview counts it by default and can leave it out.
           </p>
         </div>
 

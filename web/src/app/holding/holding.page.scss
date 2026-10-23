@@ -32,6 +32,13 @@
   gap: 12px 24px;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
 .ticker.big {
   font-size: 2.25rem;
   letter-spacing: 0;

@@ -190,6 +190,15 @@ public sealed record ManualSecurityRequest(string Symbol, string Name, string Cu
 
 public sealed record ManualPriceRequest(DateOnly Date, decimal Close);
 
+/// <summary>A property bought on <paramref name="PurchaseDate"/>; <paramref name="CurrentValue"/> is as of today.</summary>
+public sealed record PropertyRequest(
+    string Name,
+    string? Description,
+    DateOnly PurchaseDate,
+    decimal PurchasePrice,
+    decimal? ClosingCosts = null,
+    decimal? CurrentValue = null);
+
 public sealed record PricePointDto(DateOnly Date, decimal Close);
 
 public sealed record ExportTransactionDto(

@@ -382,11 +382,59 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
         Assert.Equal(PortfolioKind.RealEstate, (await GetAsync<ExportDto>("/api/export")).Portfolios.Single(p => p.Id == home.Id).Kind);
     }
 
+    [Fact]
+    public async Task A_property_is_added_to_a_real_estate_portfolio_in_one_step()
+    {
+        var home = await CreatePortfolioAsync("CAD", PortfolioKind.RealEstate);
+        var response = await _client.PostAsJsonAsync($"/api/portfolios/{home}/properties",
+            new PropertyRequest("Cottage", "12 Lake Road, Muskoka", D("2020-06-15"), 400_000m, ClosingCosts: 12_000m, CurrentValue: 650_000m), Json, Ct);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(TransactionType.Buy, (await response.Content.ReadFromJsonAsync<TransactionDto>(Json, Ct))!.Type);
+
+        var property = Assert.Single((await GetAsync<PortfolioDetailDto>($"/api/portfolios/{home}")).Holdings);
+        Assert.Equal("COTTAGE", property.Symbol);
+        Assert.Equal("12 Lake Road, Muskoka", property.Name);
+        Assert.Equal(AssetType.RealEstate, property.AssetType);
+        Assert.Equal(1m, property.Quantity);
+        Assert.Equal(412_000m, property.CostBasis);
+        Assert.Equal(650_000m, property.MarketValue);
+
+        // The purchase price holds from the purchase date until today's value.
+        var prices = await GetAsync<List<PricePointDto>>($"/api/securities/{property.SecurityId}/prices?range=ALL");
+        Assert.Equal([(D("2020-06-15"), 400_000m), (FolioApiFactory.Today, 650_000m)], prices.Select(p => (p.Date, p.Close)));
+    }
+
+    [Fact]
+    public async Task A_refused_property_leaves_nothing_behind()
+    {
+        var investments = await CreatePortfolioAsync("CAD");
+        var wrongKind = await _client.PostAsJsonAsync($"/api/portfolios/{investments}/properties",
+            new PropertyRequest("Condo", null, D("2024-01-10"), 300_000m), Json, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, wrongKind.StatusCode);
+        Assert.Contains("real-estate portfolio", (await wrongKind.Content.ReadFromJsonAsync<ProblemDetails>(Json, Ct))!.Detail);
+
+        // The purchase itself is refused after the security exists; the security goes with it.
+        var home = await CreatePortfolioAsync("CAD", PortfolioKind.RealEstate);
+        var tooOld = await _client.PostAsJsonAsync($"/api/portfolios/{home}/properties",
+            new PropertyRequest("Condo", null, D("1960-01-10"), 300_000m), Json, Ct);
+        Assert.Equal(HttpStatusCode.BadRequest, tooOld.StatusCode);
+        Assert.Equal("The date is too far in the past.", (await tooOld.Content.ReadFromJsonAsync<ProblemDetails>(Json, Ct))!.Detail);
+        Assert.DoesNotContain(await GetAsync<List<SecurityDto>>("/api/securities"), s => s.Symbol == "CONDO");
+
+        var added = await _client.PostAsJsonAsync($"/api/portfolios/{home}/properties",
+            new PropertyRequest("Condo", null, D("2024-01-10"), 300_000m), Json, Ct);
+        Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        var twice = await _client.PostAsJsonAsync($"/api/portfolios/{home}/properties",
+            new PropertyRequest("condo", null, D("2024-01-10"), 300_000m), Json, Ct);
+        Assert.Equal(HttpStatusCode.Conflict, twice.StatusCode);
+        Assert.Single((await GetAsync<PortfolioDetailDto>($"/api/portfolios/{home}")).Holdings);
+    }
+
     private static DateOnly D(string iso) => DateOnly.Parse(iso, System.Globalization.CultureInfo.InvariantCulture);
 
-    private async Task<Guid> CreatePortfolioAsync(string currency)
+    private async Task<Guid> CreatePortfolioAsync(string currency, PortfolioKind kind = PortfolioKind.Investment)
     {
-        var response = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest($"Test {currency}", currency, null), Json, Ct);
+        var response = await _client.PostAsJsonAsync("/api/portfolios", new CreatePortfolioRequest($"Test {currency}", currency, null, null, kind), Json, Ct);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<PortfolioSummaryDto>(Json, Ct))!.Id;
     }
