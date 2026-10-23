@@ -12,6 +12,7 @@ data class Me(
     val passkeys: Int = 0,
     val inboxUrl: String? = null,
     val publicUrl: String = "",
+    val hideGains: Boolean = false,
 )
 
 @Serializable
@@ -70,6 +71,8 @@ data class PortfolioSummary(
     val name: String,
     val baseCurrency: String,
     val description: String? = null,
+    val country: String? = null,
+    val kind: String = "Investment",
     val totalValue: Decimal,
     val holdingsValue: Decimal,
     val cashValue: Decimal,

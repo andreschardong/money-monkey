@@ -44,10 +44,16 @@ async function overflow(name) {
         if (!scrollParent) found.push(`${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''} right=${Math.round(r.right)}`);
       }
     }
-    return { scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, found: found.slice(0, 6) };
+    // The navigation drawer must never scroll sideways either (a long email once widened it).
+    const drawer = document.querySelector('mat-sidenav .mat-drawer-inner-container');
+    const rail = drawer ? { scrollWidth: drawer.scrollWidth, clientWidth: drawer.clientWidth } : null;
+    return { scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth, found: found.slice(0, 6), rail };
   });
   if (wide.scrollWidth > wide.clientWidth + 1 || wide.found.length) {
     problems.push(`${name}: page ${wide.scrollWidth}px wide in a ${wide.clientWidth}px viewport; ${wide.found.join('; ') || 'no single culprit'}`);
+  }
+  if (wide.rail && wide.rail.scrollWidth > wide.rail.clientWidth + 1) {
+    problems.push(`${name}: the navigation drawer scrolls sideways (${wide.rail.scrollWidth}px of content in ${wide.rail.clientWidth}px)`);
   }
 }
 

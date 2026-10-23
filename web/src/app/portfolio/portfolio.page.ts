@@ -9,9 +9,12 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Api, problemMessage } from '../core/api';
+import { Auth } from '../core/auth';
+import { countryName } from '../core/countries';
 import { FORMAT_PIPES, formatDate, formatMoney, formatQuantity, sessionLabel } from '../core/format';
 import { History, IsoDate, PortfolioDetail, Range, RealizedReport, Suggestion, Transaction } from '../core/models';
 import { MarketStatusStore, PortfolioList } from '../core/stores';
+import { Busy } from '../shared/busy';
 import { Change } from '../shared/change';
 import { confirm } from '../shared/confirm-dialog';
 import { HeroFigure } from '../shared/hero-figure';
@@ -22,13 +25,14 @@ import { HoldingsTable } from './holdings-table';
 import { IncomePanel } from './income-panel';
 import { CashDialog, CashDialogData } from './cash-dialog';
 import { PortfolioDialog } from './portfolio-dialog';
+import { PropertyDialog, PropertyDialogData } from './property-dialog';
 import { ShareDialog, ShareDialogData } from './share-dialog';
 import { TransactionsTable } from './transactions-table';
 
 @Component({
   selector: 'app-portfolio-page',
   imports: [
-    MatButtonModule, MatIcon, MatMenuModule, MatTabsModule, Change, HeroFigure, ValueChart, HoldingsTable,
+    MatButtonModule, MatIcon, MatMenuModule, MatTabsModule, Busy, Change, HeroFigure, ValueChart, HoldingsTable,
     TransactionsTable, IncomePanel, ...FORMAT_PIPES,
   ],
   templateUrl: './portfolio.page.html',
@@ -44,10 +48,12 @@ export class PortfolioPage {
   private readonly list = inject(PortfolioList);
   private readonly market = inject(MarketStatusStore);
   private readonly commands = inject(TransactionCommands);
+  protected readonly auth = inject(Auth);
 
   readonly id = input.required<string>();
   protected readonly range = signal<Range>('1Y');
   protected readonly tab = signal(0);
+  protected readonly countryName = countryName;
 
   private readonly detailResource = httpResource<PortfolioDetail>(() => `/api/portfolios/${this.id()}`);
   private readonly historyResource = httpResource<History>(() => `/api/portfolios/${this.id()}/history?range=${this.range()}`);
@@ -137,6 +143,22 @@ export class PortfolioPage {
 
   protected addTransaction(preset?: TransactionPreset): void {
     void this.openTransactionDialog({ preset });
+  }
+
+  protected addProperty(): void {
+    const detail = this.detail();
+    if (!detail) {
+      return;
+    }
+    const data: PropertyDialogData = { portfolioId: this.id(), baseCurrency: detail.summary.baseCurrency };
+    this.dialog.open<PropertyDialog, PropertyDialogData, boolean>(PropertyDialog, { data, autoFocus: 'first-tabbable', maxWidth: '96vw' })
+      .afterClosed()
+      .subscribe(added => {
+        if (added) {
+          this.snack.open('Property added.');
+          this.refresh();
+        }
+      });
   }
 
   protected editTransaction(transaction: Transaction): void {

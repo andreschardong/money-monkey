@@ -42,6 +42,11 @@ public static class PortfolioEndpoints
     {
         if (ValidatePortfolio(request.Name, request.BaseCurrency, request.Description) is { } problem)
             return problem;
+        var country = Countries.Normalize(request.Country);
+        if (!Countries.IsCode(country))
+            return Problems.BadRequest(Countries.Invalid);
+        if (!Enum.IsDefined(request.Kind))
+            return Problems.BadRequest("The account type must be Investment or RealEstate.");
 
         var now = time.GetUtcNow();
         var portfolio = new Portfolio
@@ -51,6 +56,8 @@ public static class PortfolioEndpoints
             Name = request.Name.Trim(),
             BaseCurrency = Currencies.Normalize(request.BaseCurrency),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            Country = country,
+            Kind = request.Kind,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -76,6 +83,12 @@ public static class PortfolioEndpoints
         if (ValidatePortfolio(request.Name, request.BaseCurrency, request.Description) is { } problem)
             return problem;
 
+        var country = Countries.Normalize(request.Country);
+        if (!Countries.IsCode(country))
+            return Problems.BadRequest(Countries.Invalid);
+        if (!Enum.IsDefined(request.Kind))
+            return Problems.BadRequest("The account type must be Investment or RealEstate.");
+
         var currency = Currencies.Normalize(request.BaseCurrency);
         if (currency != portfolio.BaseCurrency && await db.Transactions.AnyAsync(t => t.PortfolioId == id, ct))
             return Problems.BadRequest("The currency cannot change once transactions are recorded, because each one stores its exchange rate to it.");
@@ -83,6 +96,8 @@ public static class PortfolioEndpoints
         portfolio.Name = request.Name.Trim();
         portfolio.BaseCurrency = currency;
         portfolio.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        portfolio.Country = country;
+        portfolio.Kind = request.Kind;
         portfolio.UpdatedAt = time.GetUtcNow();
         await db.SaveChangesAsync(ct);
         return TypedResults.Ok(ToSummary(await calculator.SnapshotAsync(portfolio, ct)));

@@ -8,9 +8,11 @@ import {
   FxRates,
   ImportResult,
   IsoDate,
+  PortfolioKind,
   PortfolioSummary,
   PriceOn,
   Problem,
+  PropertyRequest,
   Security,
   SetCashRequest,
   Share,
@@ -25,12 +27,12 @@ import {
 export class Api {
   private readonly http = inject(HttpClient);
 
-  createPortfolio(name: string, baseCurrency: Currency, description: string | null) {
-    return this.send(this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description }));
+  createPortfolio(name: string, baseCurrency: Currency, description: string | null, country: string | null, kind: PortfolioKind) {
+    return this.send(this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description, country, kind }));
   }
 
-  updatePortfolio(id: string, name: string, baseCurrency: Currency, description: string | null) {
-    return this.send(this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description }));
+  updatePortfolio(id: string, name: string, baseCurrency: Currency, description: string | null, country: string | null, kind: PortfolioKind) {
+    return this.send(this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description, country, kind }));
   }
 
   deletePortfolio(id: string) {
@@ -39,6 +41,10 @@ export class Api {
 
   addTransaction(portfolioId: string, request: TransactionRequest) {
     return this.send(this.http.post<Transaction[]>(`/api/portfolios/${portfolioId}/transactions`, request));
+  }
+
+  addProperty(portfolioId: string, request: PropertyRequest) {
+    return this.send(this.http.post<Transaction>(`/api/portfolios/${portfolioId}/properties`, request));
   }
 
   updateTransaction(portfolioId: string, transactionId: string, request: TransactionRequest) {

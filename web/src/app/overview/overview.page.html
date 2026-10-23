@@ -18,7 +18,7 @@
   </section>
 } @else if (overview(); as o) {
   <section class="hero" [class.refreshing]="loadingOverview()">
-    <h1 class="title">Net worth</h1>
+    <h1 class="title">Net worth@if (!realEstate.include()) {<span class="muted"> without real estate</span>}</h1>
     <div class="figure-row">
       <app-hero-figure [value]="o.totalValue" [currency]="o.currency" />
       <mat-button-toggle-group
@@ -31,23 +31,28 @@
           <mat-button-toggle [value]="c">{{ c }}</mat-button-toggle>
         }
       </mat-button-toggle-group>
+      <mat-slide-toggle class="real-estate" [checked]="realEstate.include()" (change)="realEstate.set($event.checked)">
+        Include real estate
+      </mat-slide-toggle>
     </div>
 
     <dl class="facts">
-      <div>
-        <dt>{{ dayLabel(o.dayChangeDate) }}</dt>
-        <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
-      </div>
-      <div>
-        <dt>Total return</dt>
-        <dd>
-          @if (o.totalReturn !== null) {
-            <app-change [amount]="o.totalReturn" [percent]="o.totalReturnPercent" [currency]="o.currency" />
-          } @else {
-            <span class="muted">Record deposits to track</span>
-          }
-        </dd>
-      </div>
+      @if (auth.showGains()) {
+        <div>
+          <dt>{{ dayLabel(o.dayChangeDate) }}</dt>
+          <dd><app-change [amount]="o.dayChange" [percent]="o.dayChangePercent" [currency]="o.currency" /></dd>
+        </div>
+        <div>
+          <dt>Total return</dt>
+          <dd>
+            @if (o.totalReturn !== null) {
+              <app-change [amount]="o.totalReturn" [percent]="o.totalReturnPercent" [currency]="o.currency" />
+            } @else {
+              <span class="muted">Record deposits to track</span>
+            }
+          </dd>
+        </div>
+      }
       <div>
         <dt>Net deposits</dt>
         <dd class="num">{{ o.netContributions | money: o.currency }}</dd>
@@ -82,8 +87,10 @@
         <tr>
           <th appSort="name" [sort]="portfolioSort">Portfolio</th>
           <th class="right" appSort="value" [sort]="portfolioSort" defaultDirection="desc">Value</th>
-          <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">{{ dayLabel(o.dayChangeDate) }}</th>
-          <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
+          @if (auth.showGains()) {
+            <th class="right hide-s" appSort="today" [sort]="portfolioSort" defaultDirection="desc">{{ dayLabel(o.dayChangeDate) }}</th>
+            <th class="right" appSort="return" [sort]="portfolioSort" defaultDirection="desc">Total return</th>
+          }
         </tr>
       </thead>
       <tbody>
@@ -92,8 +99,14 @@
             <td>
               <a class="row-link" [routerLink]="['/portfolios', p.id]" (click)="$event.stopPropagation()">{{ p.name }}</a>
               <span class="currency-code">{{ p.baseCurrency }}</span>
+              @if (p.kind === 'RealEstate') {
+                <span class="currency-code">Real estate</span>
+              }
               <div class="muted small">
                 {{ p.holdingsCount }} {{ p.holdingsCount === 1 ? 'holding' : 'holdings' }}
+                @if (p.country) {
+                  · {{ countryName(p.country) }}
+                }
                 @if (p.access !== 'Owner') {
                   · shared by {{ p.ownerEmail }}
                 }
@@ -105,15 +118,17 @@
                 <div class="muted small">{{ p.value | money: p.baseCurrency }}</div>
               }
             </td>
-            <td class="right hide-s"><app-change [amount]="p.dayChangeInDisplay" [currency]="o.currency" [showArrow]="false" /></td>
-            <td class="right">
-              @if (p.totalReturnInDisplay !== null) {
-                <app-change [amount]="p.totalReturnInDisplay" [currency]="o.currency" [showArrow]="false" />
-                <div class="small"><app-change [percent]="p.totalReturnPercent" [showArrow]="false" /></div>
-              } @else {
-                <span class="muted">—</span>
-              }
-            </td>
+            @if (auth.showGains()) {
+              <td class="right hide-s"><app-change [amount]="p.dayChangeInDisplay" [currency]="o.currency" [showArrow]="false" /></td>
+              <td class="right">
+                @if (p.totalReturnInDisplay !== null) {
+                  <app-change [amount]="p.totalReturnInDisplay" [currency]="o.currency" [showArrow]="false" />
+                  <div class="small"><app-change [percent]="p.totalReturnPercent" [showArrow]="false" /></div>
+                } @else {
+                  <span class="muted">—</span>
+                }
+              </td>
+            }
           </tr>
         }
       </tbody>
@@ -140,9 +155,19 @@
         <p class="muted">Nothing invested yet.</p>
       }
     </section>
+
+    <section class="panel">
+      <h2>By country</h2>
+      <p class="caption">Where your accounts are held, each portfolio counted whole.</p>
+      @if (hasCountries()) {
+        <app-allocation-bar [items]="byCountry()" [currency]="o.currency" colourBy="country" />
+      } @else {
+        <p class="muted">Give a portfolio a country (Edit portfolio) to see the split.</p>
+      }
+    </section>
   </div>
 
-  @if (o.movers.length) {
+  @if (o.movers.length && auth.showGains()) {
     <section class="panel">
       <h2>Biggest moves</h2>
       <p class="caption">Last close against the one before, for everything you hold.</p>
@@ -159,5 +184,5 @@
     </section>
   }
 } @else {
-  <div class="loading muted" aria-live="polite">Loading your portfolios…</div>
+  <app-busy label="Loading your portfolios…" />
 }

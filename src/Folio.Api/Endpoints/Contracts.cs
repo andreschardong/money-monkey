@@ -3,9 +3,13 @@ using Folio.Core;
 
 namespace Folio.Api.Endpoints;
 
-public sealed record CreatePortfolioRequest(string Name, string BaseCurrency, string? Description);
+/// <param name="Country">ISO 3166-1 alpha-2, such as CA or US; null for none.</param>
+/// <param name="Kind">Investment (the default) or RealEstate.</param>
+public sealed record CreatePortfolioRequest(
+    string Name, string BaseCurrency, string? Description, string? Country = null, PortfolioKind Kind = PortfolioKind.Investment);
 
-public sealed record UpdatePortfolioRequest(string Name, string BaseCurrency, string? Description);
+public sealed record UpdatePortfolioRequest(
+    string Name, string BaseCurrency, string? Description, string? Country = null, PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record PortfolioSummaryDto(
     Guid Id,
@@ -28,7 +32,9 @@ public sealed record PortfolioSummaryDto(
     string Access,
     string? OwnerEmail,
     int SharedWith,
-    DateOnly? DayChangeDate);
+    DateOnly? DayChangeDate,
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record PortfolioDetailDto(
     PortfolioSummaryDto Summary,
@@ -184,6 +190,15 @@ public sealed record ManualSecurityRequest(string Symbol, string Name, string Cu
 
 public sealed record ManualPriceRequest(DateOnly Date, decimal Close);
 
+/// <summary>A property bought on <paramref name="PurchaseDate"/>; <paramref name="CurrentValue"/> is as of today.</summary>
+public sealed record PropertyRequest(
+    string Name,
+    string? Description,
+    DateOnly PurchaseDate,
+    decimal PurchasePrice,
+    decimal? ClosingCosts = null,
+    decimal? CurrentValue = null);
+
 public sealed record PricePointDto(DateOnly Date, decimal Close);
 
 public sealed record ExportTransactionDto(
@@ -209,7 +224,9 @@ public sealed record ExportPortfolioDto(
     string? Description,
     DateTimeOffset CreatedAt,
     IReadOnlyList<ExportTransactionDto> Transactions,
-    IReadOnlyList<CashEntryDto> CashBalances);
+    IReadOnlyList<CashEntryDto> CashBalances,
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 /// <summary>Everything the account entered; what a restore or another tool would need.</summary>
 public sealed record ExportDto(DateTimeOffset ExportedAt, IReadOnlyList<ExportPortfolioDto> Portfolios);
@@ -264,7 +281,9 @@ public sealed record OverviewPortfolioDto(
     decimal? TotalReturnPercent,
     int HoldingsCount,
     string Access,
-    string? OwnerEmail);
+    string? OwnerEmail,
+    string? Country = null,
+    PortfolioKind Kind = PortfolioKind.Investment);
 
 public sealed record AllocationDto(string Key, string Label, decimal Value, decimal Weight);
 
@@ -283,6 +302,7 @@ public sealed record OverviewDto(
     IReadOnlyList<OverviewPortfolioDto> Portfolios,
     IReadOnlyList<AllocationDto> ByCurrency,
     IReadOnlyList<AllocationDto> ByAssetType,
+    IReadOnlyList<AllocationDto> ByCountry,
     IReadOnlyList<MoverDto> Movers,
     IReadOnlyList<string> Warnings,
     DateOnly? DayChangeDate);

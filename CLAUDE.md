@@ -14,7 +14,7 @@ Project skills with the conventions to follow: `.claude/skills/angular-practices
 | Build everything | `dotnet build Folio.slnx` and `cd web; npx ng build --configuration development` |
 | Engine and API tests | `tests\Folio.Core.Tests\bin\Debug\net10.0\Folio.Core.Tests.exe` and `tests\Folio.Api.Tests\bin\Debug\net10.0\Folio.Api.Tests.exe` (`-class Folio.Api.Tests.X` to filter; API tests start PostgreSQL in Docker). `dotnet test` on the solution has reported "zero tests ran" with this SDK; the executables are reliable. |
 | Web unit tests | `cd web; npx ng test --watch=false` (`npx vitest run` alone does not work) |
-| Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `mobile`, `pwa`, `screens` against `http://localhost:8090` with registration open (below) |
+| Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `mobile`, `pwa`, `charts`, `gains`, `country`, `realestate`, `screens` against `http://localhost:8090` with registration open (below) |
 | Local container | `docker compose up -d --build app` (database and Mailpit stay up); `docker compose restart app` resets the email rate limiter |
 | Cloud | `.\deploy\azure\push-image.ps1` then `.\deploy\azure\deploy.ps1 -Image <printed tag>`; `bind-domain.ps1` for the host name. Values come from `.env`. |
 

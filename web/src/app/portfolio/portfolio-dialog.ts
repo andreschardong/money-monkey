@@ -5,8 +5,10 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { Api, problemMessage } from '../core/api';
-import { Currency, PORTFOLIO_CURRENCIES, PortfolioSummary } from '../core/models';
+import { COUNTRIES } from '../core/countries';
+import { Currency, PORTFOLIO_CURRENCIES, PORTFOLIO_KINDS, PortfolioKind, PortfolioSummary } from '../core/models';
 
 export interface PortfolioDialogData {
   portfolio?: PortfolioSummary;
@@ -15,7 +17,7 @@ export interface PortfolioDialogData {
 /** Create a portfolio, or rename an existing one. */
 @Component({
   selector: 'app-portfolio-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule],
+  imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatSelectModule],
   template: `
     <h2 mat-dialog-title>{{ editing ? 'Edit portfolio' : 'New portfolio' }}</h2>
     <form [formGroup]="form" (ngSubmit)="save()">
@@ -24,6 +26,19 @@ export interface PortfolioDialogData {
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" maxlength="100" placeholder="TFSA, RRSP, US margin…" cdkFocusInitial>
         </mat-form-field>
+
+        <div class="currency">
+          <span id="kind-label" class="label">Account type</span>
+          <mat-button-toggle-group formControlName="kind" aria-labelledby="kind-label" hideSingleSelectionIndicator>
+            @for (k of kinds; track k.value) {
+              <mat-button-toggle [value]="k.value">{{ k.label }}</mat-button-toggle>
+            }
+          </mat-button-toggle-group>
+          <p class="hint">
+            Real estate holds the properties you own: add each one with Add property, then update its value now and
+            then. The overview counts it by default and can leave it out.
+          </p>
+        </div>
 
         <div class="currency">
           <span id="currency-label" class="label">Currency</span>
@@ -41,6 +56,17 @@ export interface PortfolioDialogData {
             }
           </p>
         </div>
+
+        <mat-form-field>
+          <mat-label>Country (optional)</mat-label>
+          <mat-select formControlName="country">
+            <mat-option [value]="null">None</mat-option>
+            @for (c of countries; track c.code) {
+              <mat-option [value]="c.code">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Where the account is held. The overview sums your portfolios by country.</mat-hint>
+        </mat-form-field>
 
         <mat-form-field>
           <mat-label>Description (optional)</mat-label>
@@ -72,6 +98,8 @@ export class PortfolioDialog {
   private readonly data = inject<PortfolioDialogData | null>(MAT_DIALOG_DATA, { optional: true });
 
   protected readonly currencies = PORTFOLIO_CURRENCIES;
+  protected readonly kinds = PORTFOLIO_KINDS;
+  protected readonly countries = COUNTRIES;
   protected readonly editing = !!this.data?.portfolio;
   protected readonly currencyLocked = (this.data?.portfolio?.transactionsCount ?? 0) > 0;
   protected readonly saving = signal(false);
@@ -81,6 +109,8 @@ export class PortfolioDialog {
     name: new FormControl(this.data?.portfolio?.name ?? '', { nonNullable: true, validators: [Validators.required, Validators.maxLength(100)] }),
     baseCurrency: new FormControl<Currency>({ value: this.data?.portfolio?.baseCurrency ?? 'CAD', disabled: this.currencyLocked }, { nonNullable: true }),
     description: new FormControl(this.data?.portfolio?.description ?? '', { nonNullable: true }),
+    country: new FormControl<string | null>(this.data?.portfolio?.country ?? null),
+    kind: new FormControl<PortfolioKind>(this.data?.portfolio?.kind ?? 'Investment', { nonNullable: true }),
   });
 
   protected async save(): Promise<void> {
@@ -90,13 +120,13 @@ export class PortfolioDialog {
       return;
     }
 
-    const { name, baseCurrency, description } = this.form.getRawValue();
+    const { name, baseCurrency, description, country, kind } = this.form.getRawValue();
     this.saving.set(true);
     this.error.set(null);
     try {
       const saved = this.editing
-        ? await this.api.updatePortfolio(this.data!.portfolio!.id, name.trim(), baseCurrency, description.trim() || null)
-        : await this.api.createPortfolio(name.trim(), baseCurrency, description.trim() || null);
+        ? await this.api.updatePortfolio(this.data!.portfolio!.id, name.trim(), baseCurrency, description.trim() || null, country, kind)
+        : await this.api.createPortfolio(name.trim(), baseCurrency, description.trim() || null, country, kind);
       this.ref.close(saved);
     } catch (error) {
       this.error.set(problemMessage(error));
