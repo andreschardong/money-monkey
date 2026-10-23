@@ -55,10 +55,12 @@ import groupIcon from '@material-symbols/svg-400/rounded/group.svg';
 import personAddIcon from '@material-symbols/svg-400/rounded/person_add.svg';
 import uploadFileIcon from '@material-symbols/svg-400/rounded/upload_file.svg';
 import downloadIcon from '@material-symbols/svg-400/rounded/download.svg';
+import addHomeIcon from '@material-symbols/svg-400/rounded/add_home.svg';
 
 // Only the icons listed here are bundled, as inline SVG text.
 const ICONS: Record<string, string> = {
   add: addIcon,
+  add_home: addHomeIcon,
   dashboard: dashboardIcon,
   account_balance_wallet: accountBalanceWalletIcon,
   monitoring: monitoringIcon,

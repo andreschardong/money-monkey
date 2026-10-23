@@ -1,5 +1,6 @@
-// A portfolio can be a real-estate account: it is marked as such, By type shows it as its own slice, and the overview's
-// "Include real estate" switch leaves it out of every figure, remembered in the browser.
+// A portfolio can be a real-estate account: it is marked as such, a property goes in through the Add property dialog
+// and is revalued from its own page, By type shows it as its own slice, and the overview's "Include real estate"
+// switch leaves it out of every figure, remembered in the browser.
 // Usage: node realestate-check.mjs [baseUrl] [mailpitUrl]   (registration open on the target; prices need the internet)
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
@@ -51,12 +52,43 @@ await page.getByTestId('kind').waitFor();
 report((await page.getByTestId('kind').textContent())?.trim() === 'Real estate', 'portfolio page marks the account as real estate');
 report((await json(await api.get(`${base}/api/portfolios/${apartmentId}`))).summary.kind === 'RealEstate', 'the API stores the kind (RealEstate)');
 
-// The property itself: a manually priced holding worth $500,000.
-const security = await json(await api.post(`${base}/api/securities/manual`,
-  { data: { symbol: 'APT-SP', name: 'Apartment in São Paulo', currency: 'CAD', assetType: 'Other', price: 500000, date: '2026-10-01' } }))
-  .catch(async () => (await json(await api.get(`${base}/api/securities`))).find(s => s.symbol === 'APT-SP'));
-await json(await api.post(`${base}/api/portfolios/${apartmentId}/transactions`,
-  { data: { type: 'Buy', date: '2026-10-01', securityId: security.id, quantity: 1, price: 500000 } }));
+// ------------------------------------------------------------------ the property, through the Add property dialog
+await page.getByText('No properties yet').waitFor();
+report(true, 'portfolio page: the empty table offers a property, not shares');
+await page.getByRole('button', { name: 'Add property' }).click();
+await dialog.getByRole('heading', { name: 'Add a property' }).waitFor();
+await dialog.getByRole('button', { name: 'Add property' }).click();
+report((await dialog.getByRole('alert').textContent())?.includes('short name') === true, 'dialog: an empty form says what is missing');
+await dialog.getByLabel('Short name').fill('APT-SP');
+await dialog.getByLabel('Address or description (optional)').fill('Apartment in São Paulo');
+await dialog.getByLabel('Purchase date').fill('2019-03-15');
+await dialog.getByLabel('Purchase price').fill('420000');
+await dialog.getByLabel('Closing costs (optional)').fill('8000');
+await dialog.getByLabel('Value today (optional)').fill('500000');
+await dialog.screenshot({ path: 'shots/realestate-property-dialog.png' });
+await dialog.getByRole('button', { name: 'Add property' }).click();
+await dialog.waitFor({ state: 'hidden', timeout: 15000 });
+const propertyRow = page.locator('app-holdings-table tbody tr', { hasText: 'APT-SP' });
+await propertyRow.waitFor({ timeout: 15000 });
+const property = (await json(await api.get(`${base}/api/portfolios/${apartmentId}`))).holdings.find(h => h.symbol === 'APT-SP');
+report(property?.assetType === 'RealEstate' && property.quantity === 1, `API: one unit of a RealEstate holding (${property?.assetType}, ${property?.quantity})`);
+report(property?.costBasis === 428000 && property?.marketValue === 500000,
+  `API: book value is price plus closing costs, value is today's (${property?.costBasis}, ${property?.marketValue})`);
+report((await propertyRow.textContent())?.includes('Apartment in São Paulo') === true, 'portfolio page: the property row shows its address');
+await page.locator('.header').screenshot({ path: 'shots/realestate-header.png' });
+
+// The three header buttons wrap on a phone instead of widening the page.
+await page.setViewportSize({ width: 390, height: 844 });
+await page.getByRole('button', { name: 'Add property' }).waitFor();
+const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+report(overflow <= 0, `phone: the real-estate portfolio page does not scroll sideways (${overflow}px)`);
+await page.locator('.header').screenshot({ path: 'shots/realestate-header-phone.png' });
+await page.getByRole('button', { name: 'Add property' }).click();
+await dialog.getByRole('heading', { name: 'Add a property' }).waitFor();
+await dialog.screenshot({ path: 'shots/realestate-property-dialog-phone.png' });
+await dialog.getByRole('button', { name: 'Cancel' }).click();
+await dialog.waitFor({ state: 'hidden' });
+await page.setViewportSize({ width: 1440, height: 900 });
 
 // ------------------------------------------------------------------ the overview counts it, then leaves it out
 await page.goto(`${base}/`);
@@ -90,6 +122,20 @@ report((await toggle.getAttribute('aria-checked')) === 'false', 'overview: the c
 await toggle.click();
 await page.locator('table.data tbody tr', { hasText: 'Apartment' }).waitFor({ timeout: 15000 });
 report(true, 'overview: switching it back on brings the property back');
+
+// ------------------------------------------------------------------ its value is updated from its own page
+await page.goto(`${base}/portfolios/${apartmentId}/holdings/${property.securityId}`);
+await page.getByRole('button', { name: 'Update value' }).click();
+await dialog.getByRole('heading', { name: 'Update value of APT-SP' }).waitFor();
+await dialog.getByLabel('Value', { exact: true }).fill('520000');
+await dialog.getByRole('button', { name: 'Save value' }).click();
+await dialog.waitFor({ state: 'hidden', timeout: 15000 });
+await page.waitForFunction(() => document.querySelector('.quote .price')?.textContent?.includes('520,000'), null, { timeout: 15000 });
+report(true, 'holding page: Update value moves the property to $520,000');
+report(await page.getByText('Valued on').isVisible(), 'holding page: says "Valued on", not "Close on"');
+const revalued = (await json(await api.get(`${base}/api/portfolios/${apartmentId}`))).holdings.find(h => h.symbol === 'APT-SP');
+report(revalued?.marketValue === 520000, `API: the new value counts in the portfolio (${revalued?.marketValue})`);
+await page.locator('.header').screenshot({ path: 'shots/realestate-holding-header.png' });
 
 const exported = await json(await api.get(`${base}/api/export`));
 report(exported.portfolios.some(p => p.name === 'Apartment' && p.kind === 'RealEstate'), 'the export carries the kind');

@@ -12,6 +12,7 @@ import {
   PortfolioSummary,
   PriceOn,
   Problem,
+  PropertyRequest,
   Security,
   SetCashRequest,
   Share,
@@ -40,6 +41,10 @@ export class Api {
 
   addTransaction(portfolioId: string, request: TransactionRequest) {
     return this.send(this.http.post<Transaction[]>(`/api/portfolios/${portfolioId}/transactions`, request));
+  }
+
+  addProperty(portfolioId: string, request: PropertyRequest) {
+    return this.send(this.http.post<Transaction>(`/api/portfolios/${portfolioId}/properties`, request));
   }
 
   updateTransaction(portfolioId: string, transactionId: string, request: TransactionRequest) {

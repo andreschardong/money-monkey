@@ -62,6 +62,9 @@ public enum AssetType
     Fund,
     Crypto,
     Other,
+
+    /// <summary>A property added to a real-estate portfolio: one unit, valued by hand.</summary>
+    RealEstate,
 }
 
 public sealed class Security
