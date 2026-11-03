@@ -33,7 +33,8 @@ public sealed class FolioDbContext(DbContextOptions<FolioDbContext> options, ICu
     {
         builder.Properties<decimal>().HavePrecision(28, 10);
         builder.Properties<TransactionType>().HaveConversion<string>().HaveMaxLength(20);
-        builder.Properties<PriceSource>().HaveConversion<string>().HaveMaxLength(10);
+        // "AlphaVantage" is 12 characters, so ten was too short to ever store a close taken from the second source.
+        builder.Properties<PriceSource>().HaveConversion<string>().HaveMaxLength(20);
         builder.Properties<AssetType>().HaveConversion<string>().HaveMaxLength(10);
         builder.Properties<CorporateActionKind>().HaveConversion<string>().HaveMaxLength(10);
         builder.Properties<RefreshStatus>().HaveConversion<string>().HaveMaxLength(20);

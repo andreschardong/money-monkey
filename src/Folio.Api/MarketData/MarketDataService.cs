@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using Folio.Api.Auth;
 using Folio.Api.Data;
 using Folio.Core;
@@ -185,6 +186,7 @@ public sealed class MarketDataService(
         await db.SaveChangesAsync(ct);
 
         var log = new List<string>();
+        Exception? cancellation = null;
         try
         {
             var (fxStored, fxOk) = await RefreshFxAsync(log, ct);
@@ -225,17 +227,29 @@ public sealed class MarketDataService(
             log.Add($"Refresh failed: {ex.Message}");
             run.Status = RefreshStatus.Failed;
         }
-        finally
+        catch (Exception ex)
         {
-            run.FinishedAt = clock.UtcNow;
-            run.Status = run.Status == RefreshStatus.Running ? RefreshStatus.Failed : run.Status;
-            run.Log = string.Join('\n', log);
-            await db.SaveChangesAsync(CancellationToken.None);
+            // Cancelled mid-run: the record of it still has to say that it ended, and how far it got, before the
+            // cancellation carries on up the stack.
+            cancellation = ex;
         }
+
+        await FinishAsync(run, log);
+        if (cancellation is not null)
+            ExceptionDispatchInfo.Throw(cancellation);
 
         logger.LogInformation("Market data refresh {Status}: {Updated} updated, {Failed} failed, {Fx} FX rates",
             run.Status, run.SecuritiesUpdated, run.SecuritiesFailed, run.FxRatesStored);
         return run;
+    }
+
+    /// <summary>Stamps the run as finished; a run that never reached a verdict counts as failed. Saved even if the caller cancelled.</summary>
+    private async Task FinishAsync(RefreshRun run, List<string> log)
+    {
+        run.FinishedAt = clock.UtcNow;
+        run.Status = run.Status == RefreshStatus.Running ? RefreshStatus.Failed : run.Status;
+        run.Log = string.Join('\n', log);
+        await db.SaveChangesAsync(CancellationToken.None);
     }
 
     private async Task<(int Stored, bool Ok)> RefreshFxAsync(List<string> log, CancellationToken ct)

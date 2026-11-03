@@ -1,0 +1,99 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.container {
+  height: 100%;
+  background: var(--paper);
+}
+
+.rail {
+  width: var(--rail);
+  border-right: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--paper);
+  --mat-sidenav-container-shape: 0;
+}
+
+// Signed-out pages: one centred column, no rail.
+.content.bare {
+  position: relative;
+
+  main {
+    max-width: none;
+    padding: clamp(32px, 10vh, 96px) 16px 48px;
+  }
+}
+
+.bare-theme {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--wash);
+    color: var(--ink);
+  }
+
+  mat-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.content {
+  background: var(--paper);
+}
+
+.nav-progress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 3;
+}
+
+// The wordmark in the phone top bar; the rail has its own, larger one.
+.brand {
+  display: block;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-stretch: 125%;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+}
+
+main {
+  max-width: 1180px;
+  padding: 36px 48px 72px;
+}
+
+@media (max-width: 959px) {
+  main {
+    padding: 20px 16px 56px;
+  }
+}

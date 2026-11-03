@@ -19,10 +19,13 @@ public static class AppVersion
     /// SourceRevisionId; App:BuiltAt is set by the image build. Nothing here is secret: the commit is public.
     /// </summary>
     public static VersionDto Describe(IConfiguration configuration) =>
-        Parse(typeof(AppVersion).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                ?? typeof(AppVersion).Assembly.GetName().Version?.ToString(3)
-                ?? "0.0.0",
-            configuration["App:BuiltAt"]);
+        Parse(InformationalVersionOf(typeof(AppVersion).Assembly), configuration["App:BuiltAt"]);
+
+    /// <summary>The assembly's informational version, else its plain version, else "0.0.0".</summary>
+    internal static string InformationalVersionOf(Assembly assembly) =>
+        assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString(3)
+            ?? "0.0.0";
 
     /// <summary>Splits "1.2.3+sha" into the version and a 7-character commit; a missing or invalid build time is null.</summary>
     public static VersionDto Parse(string informational, string? builtAtSetting)

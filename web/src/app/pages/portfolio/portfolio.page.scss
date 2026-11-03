@@ -1,0 +1,124 @@
+:host {
+  display: grid;
+  // Lets wide tables scroll inside their panel instead of widening the page.
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+// A removed or missing portfolio is a roomier page than the other messages.
+app-state-message {
+  --state-padding: 48px 0;
+}
+
+.description {
+  margin-top: 4px;
+  color: var(--ink-2);
+}
+
+.country {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+
+// Phones: tab labels without counts, so all three fit without paging arrows.
+@media (max-width: 599px) {
+  .count,
+  .long {
+    display: none;
+  }
+}
+
+.access {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 0.875rem;
+
+  mat-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--brass-ink);
+  }
+
+  &.link {
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+      color: var(--ink);
+    }
+  }
+}
+
+.hero {
+  display: grid;
+  gap: 14px;
+  --hero-size: clamp(2.25rem, 4vw, 3rem);
+}
+
+.facts,
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 36px;
+  margin: 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  dt {
+    color: var(--ink-3);
+    font-size: 0.8125rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+}
+
+.stats {
+  padding: 2px 4px;
+}
+
+.notices {
+  display: grid;
+  gap: 8px;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.tabs-panel {
+  --panel-padding: 6px 22px 18px;
+  --panel-padding-s: 4px 8px 8px;
+  --mat-tab-active-label-text-color: var(--ink);
+  --mat-tab-active-focus-label-text-color: var(--ink);
+  --mat-tab-active-hover-label-text-color: var(--ink);
+  --mat-tab-inactive-label-text-color: var(--ink-3);
+  --mat-tab-inactive-hover-label-text-color: var(--ink-2);
+  --mat-tab-inactive-focus-label-text-color: var(--ink-2);
+  --mat-tab-active-indicator-color: var(--brass);
+  --mat-tab-active-focus-indicator-color: var(--brass);
+  --mat-tab-active-hover-indicator-color: var(--brass);
+  --mat-tab-active-indicator-height: 3px;
+  --mat-tab-divider-color: var(--rule);
+  --mat-tab-label-text-weight: 600;
+}

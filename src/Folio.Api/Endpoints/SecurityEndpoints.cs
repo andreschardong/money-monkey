@@ -132,19 +132,13 @@ public static class SecurityEndpoints
             return TypedResults.NotFound();
 
         var today = clock.Today;
-        var from = range?.ToUpperInvariant() switch
-        {
-            "1M" => today.AddMonths(-1),
-            "3M" => today.AddMonths(-3),
-            "6M" => today.AddMonths(-6),
-            "YTD" => new DateOnly(today.Year, 1, 1),
-            "3Y" => today.AddYears(-3),
-            "5Y" => today.AddYears(-5),
-            "ALL" => await db.Transactions
+        // "All" starts at my first trade in it, or a year back when I have none.
+        var firstTrade = string.Equals(range, "ALL", StringComparison.OrdinalIgnoreCase)
+            ? await db.Transactions
                 .Where(t => t.SecurityId == id && db.Portfolios.Any(p => p.Id == t.PortfolioId))
-                .MinAsync(t => (DateOnly?)t.Date, ct) ?? today.AddYears(-1),
-            _ => today.AddYears(-1),
-        };
+                .MinAsync(t => (DateOnly?)t.Date, ct) ?? today.AddYears(-1)
+            : today;
+        var from = HistoryQuery.RangeStart(range, today, firstTrade);
 
         await market.EnsureHistoryAsync(security, from, ct);
         var points = await db.PriceBars.AsNoTracking()

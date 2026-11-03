@@ -134,6 +134,12 @@ public static class PortfolioMapper
         return warnings;
     }
 
+    /// <summary>The later of two optional dates; a missing candidate never replaces a date already seen.</summary>
+    public static DateOnly? Newest(DateOnly? current, DateOnly? candidate) =>
+        candidate is not { } later ? current
+        : current is not { } earlier || later > earlier ? later
+        : current;
+
     public static decimal Money(decimal value) => decimal.Round(value, 4, MidpointRounding.AwayFromZero);
 
     public static decimal? Ratio(decimal? value) => value is { } v ? decimal.Round(v, 6, MidpointRounding.AwayFromZero) : null;

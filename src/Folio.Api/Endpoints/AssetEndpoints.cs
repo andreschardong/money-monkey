@@ -49,10 +49,8 @@ public static class AssetEndpoints
             var baseCurrency = portfolio.BaseCurrency;
             var v = snapshot.Valuation;
             warnings.AddRange(snapshot.MissingRates.Select(c => $"{portfolio.Name}: no {c} exchange rate yet, counted 1:1."));
-            if (v.PricesAsOf is { } asOf && (pricesAsOf is null || asOf > pricesAsOf))
-                pricesAsOf = asOf;
-            if (v.DayChangeDate is { } session && (dayChangeDate is null || session > dayChangeDate))
-                dayChangeDate = session;
+            pricesAsOf = Newest(pricesAsOf, v.PricesAsOf);
+            dayChangeDate = Newest(dayChangeDate, v.DayChangeDate);
 
             foreach (var h in v.Holdings)
             {
@@ -98,7 +96,7 @@ public static class AssetEndpoints
             .Select(h => new AssetHoldingDto(
                 h.Security.Id, h.Security.Symbol, h.Security.Name, h.Security.Exchange, h.Security.AssetType, h.Currency,
                 h.Quantity,
-                h.Quantity > 0 ? Price(h.CostLocal / h.Quantity) : 0m,
+                Price(h.CostLocal / h.Quantity),
                 Money(h.CostBasis),
                 h.Price?.Close,
                 h.Price?.Date,

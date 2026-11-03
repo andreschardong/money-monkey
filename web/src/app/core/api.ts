@@ -27,12 +27,29 @@ import {
 export class Api {
   private readonly http = inject(HttpClient);
 
-  createPortfolio(name: string, baseCurrency: Currency, description: string | null, country: string | null, kind: PortfolioKind) {
-    return this.send(this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description, country, kind }));
+  createPortfolio(
+    name: string,
+    baseCurrency: Currency,
+    description: string | null,
+    country: string | null,
+    kind: PortfolioKind,
+  ) {
+    return this.send(
+      this.http.post<PortfolioSummary>('/api/portfolios', { name, baseCurrency, description, country, kind }),
+    );
   }
 
-  updatePortfolio(id: string, name: string, baseCurrency: Currency, description: string | null, country: string | null, kind: PortfolioKind) {
-    return this.send(this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description, country, kind }));
+  updatePortfolio(
+    id: string,
+    name: string,
+    baseCurrency: Currency,
+    description: string | null,
+    country: string | null,
+    kind: PortfolioKind,
+  ) {
+    return this.send(
+      this.http.put<PortfolioSummary>(`/api/portfolios/${id}`, { name, baseCurrency, description, country, kind }),
+    );
   }
 
   deletePortfolio(id: string) {
@@ -48,7 +65,9 @@ export class Api {
   }
 
   updateTransaction(portfolioId: string, transactionId: string, request: TransactionRequest) {
-    return this.send(this.http.put<Transaction>(`/api/portfolios/${portfolioId}/transactions/${transactionId}`, request));
+    return this.send(
+      this.http.put<Transaction>(`/api/portfolios/${portfolioId}/transactions/${transactionId}`, request),
+    );
   }
 
   deleteTransaction(portfolioId: string, transactionId: string) {
@@ -64,11 +83,15 @@ export class Api {
   }
 
   deleteCash(portfolioId: string, currency: Currency, date: IsoDate) {
-    return this.send(this.http.delete<void>(`/api/portfolios/${portfolioId}/cash/${encodeURIComponent(currency)}/${date}`));
+    return this.send(
+      this.http.delete<void>(`/api/portfolios/${portfolioId}/cash/${encodeURIComponent(currency)}/${date}`),
+    );
   }
 
   dismissSuggestion(portfolioId: string, securityId: string, date: IsoDate, kind: CorporateActionKind) {
-    return this.send(this.http.post<void>(`/api/portfolios/${portfolioId}/suggestions/dismiss`, { securityId, date, kind }));
+    return this.send(
+      this.http.post<void>(`/api/portfolios/${portfolioId}/suggestions/dismiss`, { securityId, date, kind }),
+    );
   }
 
   searchSecurities(query: string) {
@@ -79,8 +102,17 @@ export class Api {
     return this.send(this.http.post<Security>('/api/securities', { symbol, historyFrom }));
   }
 
-  createManualSecurity(symbol: string, name: string, currency: Currency, assetType: AssetType, price: number | null, date: IsoDate | null) {
-    return this.send(this.http.post<Security>('/api/securities/manual', { symbol, name, currency, assetType, price, date }));
+  createManualSecurity(
+    symbol: string,
+    name: string,
+    currency: Currency,
+    assetType: AssetType,
+    price: number | null,
+    date: IsoDate | null,
+  ) {
+    return this.send(
+      this.http.post<Security>('/api/securities/manual', { symbol, name, currency, assetType, price, date }),
+    );
   }
 
   setManualPrice(securityId: string, date: IsoDate, close: number) {

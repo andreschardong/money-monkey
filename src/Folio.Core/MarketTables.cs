@@ -81,7 +81,7 @@ public sealed class FxTable : IFxSource
             return 1m;
         var fromCad = CadPerUnit(from, date);
         var toCad = CadPerUnit(to, date);
-        return fromCad is null || toCad is null ? null : fromCad / toCad;
+        return fromCad is { } fromRate && toCad is { } toRate ? fromRate / toRate : null;
     }
 
     /// <summary>The date of the newest rate across all currencies.</summary>

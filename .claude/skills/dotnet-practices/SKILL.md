@@ -69,5 +69,14 @@ description: Conventions for Money Monkey's .NET 10 API and ledger engine (src/)
 - `FolioApiFactory` starts PostgreSQL in Docker, replaces quotes, rates and mail with fakes, fixes the clock at
   `FolioApiFactory.Today`, signs clients in with `CreateSignedInClientAsync(email)`, and lets a test change
   configuration at runtime with `Settings.Set(...)`. `RestrictedFolioApiFactory` has an allowed list set.
-- Name tests after the behaviour (`A_shared_portfolio_shows_up_for_the_other_account_...`), assert on status codes
-  and the problem text people see, and cover the refusal path as well as the happy path.
+- Name new tests `When<Condition>_Should<Outcome>`, assert on status codes and the problem text people see, and cover the
+  refusal path as well as the happy path. New tests use xunit v3 + NSubstitute + Shouldly and pass
+  `TestContext.Current.CancellationToken` wherever a token is taken.
+- **Coverage is gated at 100 % lines and branches**: `.\coverage.ps1` (Docker running) builds, runs both suites under
+  `dotnet-coverage` and fails below the threshold; `coverage\Cobertura.xml` shows the uncovered lines and branches per
+  file. Only EF's generated migrations and source-generator output are excluded (`coverage.settings.xml`); code that
+  cannot run is deleted, not excluded, and anything else needs `[ExcludeFromCodeCoverage(Justification = ...)]`.
+  External services (Yahoo, Alpha Vantage, the FX source, SMTP) are always faked; helpers live in `ApiClient`,
+  `ApiSeeding`, `TestSupport`, `TestHooks` and `IdentityScript`.
+- Format and lint with `dotnet format Folio.slnx --verify-no-changes` (rules in the root `.editorconfig`: file-scoped
+  namespaces, ordered usings, no stored procedures; CI runs it).

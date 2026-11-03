@@ -162,13 +162,10 @@ public sealed class TransactionWriter(FolioDbContext db, MarketDataService marke
             UpdatedAt = now,
         };
 
-        var error = type switch
-        {
-            TransactionType.Buy or TransactionType.Sell or TransactionType.TransferIn => FillTrade(transaction, request),
-            TransactionType.Split => FillSplit(transaction, request),
-            TransactionType.Dividend => FillDividend(transaction, request, security!),
-            _ => FillCash(transaction, request, portfolio),
-        };
+        var error = type.IsTrade() ? FillTrade(transaction, request)
+            : type == TransactionType.Split ? FillSplit(transaction, request)
+            : type == TransactionType.Dividend ? FillDividend(transaction, request, security!)
+            : FillCash(transaction, request, portfolio);
         if (error is not null)
             return (null, error);
 

@@ -17,7 +17,7 @@ namespace Folio.Api.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -393,8 +393,8 @@ namespace Folio.Api.Data.Migrations
 
                     b.Property<string>("Source")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("source");
 
                     b.HasKey("SecurityId", "Date")
@@ -510,8 +510,8 @@ namespace Folio.Api.Data.Migrations
 
                     b.Property<string>("PriceSource")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
                         .HasColumnName("price_source");
 
                     b.Property<string>("Symbol")

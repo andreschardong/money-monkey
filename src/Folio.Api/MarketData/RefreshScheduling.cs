@@ -64,6 +64,7 @@ public sealed class DailyRefreshWorker(
     RefreshCoordinator coordinator,
     IServiceScopeFactory scopes,
     MarketClock clock,
+    TimeProvider time,
     IOptions<MarketDataOptions> options,
     ILogger<DailyRefreshWorker> logger) : BackgroundService
 {
@@ -75,11 +76,11 @@ public sealed class DailyRefreshWorker(
         if (!options.Value.EnableScheduler)
             return;
 
-        using var timer = new PeriodicTimer(CheckInterval);
+        using var timer = new PeriodicTimer(CheckInterval, time);
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-            do
+            await Task.Delay(TimeSpan.FromSeconds(5), time, stoppingToken);
+            while (true)
             {
                 try
                 {
@@ -92,15 +93,17 @@ public sealed class DailyRefreshWorker(
                 {
                     logger.LogError(ex, "Scheduled refresh check failed");
                 }
+
+                // Only the stopping token ends the wait: the timer is never disposed while the loop runs.
+                await timer.WaitForNextTickAsync(stoppingToken);
             }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
         }
     }
 
-    private async Task<bool> IsIntradayDueAsync(CancellationToken ct)
+    internal async Task<bool> IsIntradayDueAsync(CancellationToken ct)
     {
         var minutes = options.Value.IntradayRefreshMinutes;
         if (minutes <= 0 || !clock.IsTradingHours())
@@ -109,7 +112,7 @@ public sealed class DailyRefreshWorker(
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<FolioDbContext>();
         var lastAttempt = await db.RefreshRuns.MaxAsync(r => (DateTimeOffset?)r.StartedAt, ct);
-        return lastAttempt is null || clock.UtcNow - lastAttempt >= TimeSpan.FromMinutes(minutes);
+        return lastAttempt is not { } last || clock.UtcNow - last >= TimeSpan.FromMinutes(minutes);
     }
 
     private async Task<bool> IsDueAsync(CancellationToken ct)
@@ -124,6 +127,6 @@ public sealed class DailyRefreshWorker(
 
         // Don't hammer the providers while offline: wait a while after a failed attempt.
         var lastAttempt = await db.RefreshRuns.MaxAsync(r => (DateTimeOffset?)r.StartedAt, ct);
-        return lastAttempt is null || clock.UtcNow - lastAttempt > RetryAfterFailure;
+        return lastAttempt is not { } last || clock.UtcNow - last > RetryAfterFailure;
     }
 }
