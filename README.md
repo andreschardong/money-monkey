@@ -154,7 +154,8 @@ every download, goes to the server.
 | Database and inbox | `docker compose up -d db mailpit` (PostgreSQL on `localhost:5434`, Mailpit on 1025/8025) |
 | API | `dotnet run --project src/Folio.Api` on <http://localhost:5080>; API explorer at `/scalar` |
 | Web | `cd web; npm install; npx ng serve` on <http://localhost:4200> (proxies `/api` to the API) |
-| Tests | `dotnet test` (the API tests start PostgreSQL in Docker) and `cd web; npx ng test --watch=false` |
+| Tests | `.\coverage.ps1` runs the engine and API tests (the API tests start PostgreSQL in Docker) under code coverage and fails below 100 % lines or branches; `cd web; npm run coverage` runs the web unit tests and fails below 100 % |
+| Lint and format | `dotnet format Folio.slnx --verify-no-changes` for the .NET code (rules in `.editorconfig`); `cd web; npm run lint`, `npm run format` (Prettier) and `npm run architecture` (atomic-design layering) for the web app |
 | Browser checks | `cd tests/browser; npm run account`, `trading`, `suggestions`, `sharing`, `screens`, `mobile` (phone-size screenshots into `shots/` plus an overflow report), `pwa` (manifest, service worker, downloads bypass the cache), `charts` (axes fit the data), `gains` (the Account page switch hides every gain and change figure; the loading spinners), `country` (a portfolio's country and the overview's split by country), `realestate` (a real-estate portfolio and the overview switch that leaves it out) against the running container; `live` checks the deployed site anonymously; `icons` re-renders the app icons from `web/public/favicon.svg` (registration must be open: an empty `FOLIO_ALLOWED_EMAILS` while they run) |
 | Migrations | `dotnet ef migrations add <Name> --project src/Folio.Api --output-dir Data/Migrations` (applied on start-up) |
 
@@ -174,8 +175,9 @@ The development API reads the Alpha Vantage key from user secrets:
 ```text
 src/Folio.Core   ledger engine: cost base, splits, entered cash, valuation, history, XIRR (no framework code)
 src/Folio.Api    ASP.NET Core API, EF Core + PostgreSQL, market data clients, daily refresh
-web              Angular 22, Angular Material, ECharts
-tests            xUnit v3: engine tests, Yahoo parsing tests, API tests on a real PostgreSQL
+web              Angular 22, Angular Material, ECharts, laid out as atomic design:
+                   src/app/{atoms,molecules,organisms,templates,pages} plus core (services, models, formatting)
+tests            xUnit v3 + NSubstitute + Shouldly: engine tests, market-data client tests, API tests on a real PostgreSQL
 ```
 
 ## How the numbers work

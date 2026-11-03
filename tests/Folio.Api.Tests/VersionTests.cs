@@ -9,6 +9,21 @@ public class VersionTests(FolioApiFactory factory) : IClassFixture<FolioApiFacto
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
+    public void WhenAnAssemblyHasNoInformationalVersion_ShouldFallBackToItsPlainVersionThenToZero()
+    {
+        AppVersion.InformationalVersionOf(new BareAssembly(new Version(1, 2, 3, 4))).ShouldBe("1.2.3");
+        AppVersion.InformationalVersionOf(new BareAssembly(null)).ShouldBe("0.0.0");
+        AppVersion.InformationalVersionOf(typeof(AppVersion).Assembly).ShouldNotBeNullOrEmpty();
+    }
+
+    private sealed class BareAssembly(Version? version) : System.Reflection.Assembly
+    {
+        public override object[] GetCustomAttributes(Type attributeType, bool inherit) => new Attribute[0];
+
+        public override System.Reflection.AssemblyName GetName() => new("Bare") { Version = version };
+    }
+
+    [Fact]
     public async Task The_version_is_public_and_matches_the_build()
     {
         using var anonymous = factory.CreateClient();

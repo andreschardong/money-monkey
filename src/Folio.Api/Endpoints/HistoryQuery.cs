@@ -6,7 +6,22 @@ namespace Folio.Api.Endpoints;
 
 internal static class HistoryQuery
 {
-    public static readonly string[] Ranges = ["1M", "3M", "6M", "YTD", "1Y", "3Y", "5Y", "ALL"];
+    /// <summary>Where each chart range starts, from today and from the first activity (a start before that is moved up to it).</summary>
+    private static readonly Dictionary<string, Func<DateOnly, DateOnly, DateOnly>> RangeStarts = new(StringComparer.Ordinal)
+    {
+        ["1M"] = (today, _) => today.AddMonths(-1),
+        ["3M"] = (today, _) => today.AddMonths(-3),
+        ["6M"] = (today, _) => today.AddMonths(-6),
+        ["YTD"] = (today, _) => new DateOnly(today.Year, 1, 1),
+        ["1Y"] = (today, _) => today.AddYears(-1),
+        ["3Y"] = (today, _) => today.AddYears(-3),
+        ["5Y"] = (today, _) => today.AddYears(-5),
+        ["ALL"] = (_, first) => first,
+    };
+
+    /// <summary>The first day of a named range; an unknown or missing name means one year back.</summary>
+    public static DateOnly RangeStart(string? range, DateOnly today, DateOnly first) =>
+        range is not null && RangeStarts.TryGetValue(range.ToUpperInvariant(), out var start) ? start(today, first) : today.AddYears(-1);
 
     public static async Task<HistoryDto> BuildAsync(
         IReadOnlyList<(string BaseCurrency, List<Transaction> Transactions, CashLedger Cash)> portfolios,
@@ -15,7 +30,8 @@ internal static class HistoryQuery
         PortfolioCalculator calculator,
         CancellationToken ct)
     {
-        var key = Ranges.Contains(range?.ToUpperInvariant()) ? range!.ToUpperInvariant() : "1Y";
+        var requested = range?.ToUpperInvariant();
+        var key = requested is not null && RangeStarts.ContainsKey(requested) ? requested : "1Y";
         var all = portfolios.SelectMany(p => p.Transactions).ToList();
         var firstCash = portfolios.Select(p => p.Cash.FirstDate).Where(d => d is not null).Min();
         if (all.Count == 0 && firstCash is null)
@@ -23,17 +39,7 @@ internal static class HistoryQuery
 
         var today = calculator.Today;
         var first = all.Count == 0 ? firstCash!.Value : firstCash is { } fc && fc < all.Min(t => t.Date) ? fc : all.Min(t => t.Date);
-        var from = key switch
-        {
-            "1M" => today.AddMonths(-1),
-            "3M" => today.AddMonths(-3),
-            "6M" => today.AddMonths(-6),
-            "YTD" => new DateOnly(today.Year, 1, 1),
-            "3Y" => today.AddYears(-3),
-            "5Y" => today.AddYears(-5),
-            "ALL" => first,
-            _ => today.AddYears(-1),
-        };
+        var from = RangeStarts[key](today, first);
         if (from < first)
             from = first;
 

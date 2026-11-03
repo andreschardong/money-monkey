@@ -48,9 +48,10 @@ public static class Xirr
         // Fall back to bisection, which is slow but cannot diverge.
         double lo = -0.9999, hi = 100;
         double fLo = Npv(lo), fHi = Npv(hi);
-        if (double.IsNaN(fLo) || double.IsNaN(fHi) || Math.Sign(fLo) == Math.Sign(fHi))
+        // At a high rate every discount factor is at least one, so only the low end can overflow into NaN.
+        if (double.IsNaN(fLo) || Math.Sign(fLo) == Math.Sign(fHi))
             return null;
-        for (var i = 0; i < 300 && hi - lo > 1e-10; i++)
+        while (hi - lo > 1e-10)
         {
             var mid = (lo + hi) / 2;
             var fMid = Npv(mid);

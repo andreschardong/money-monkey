@@ -179,7 +179,7 @@ public static class PortfolioEndpoints
         var quotes = await SecurityEndpoints.LatestQuotesAsync(db, [securityId], ct);
         var v = snapshot.Valuation;
         var holding = v.Holdings.FirstOrDefault(h => h.Position.SecurityId == securityId);
-        var position = snapshot.Ledger.Positions.GetValueOrDefault(securityId);
+        var position = snapshot.Ledger.Positions[securityId];   // every security with a transaction has a position
         var transactions = snapshot.Transactions
             .Where(t => t.SecurityId == securityId)
             .OrderByDescending(t => t.Date)
@@ -191,8 +191,8 @@ public static class PortfolioEndpoints
             portfolio.BaseCurrency,
             ToDto(security, quotes.GetValueOrDefault(securityId), inUse: true, calculator.Today),
             holding is null ? null : ToHolding(holding, security, v.TotalValue > 0 ? v.TotalValue : v.HoldingsValue),
-            Money(position?.RealizedBase ?? 0m),
-            Money(position?.DividendsBase ?? 0m),
+            Money(position.RealizedBase),
+            Money(position.DividendsBase),
             transactions));
     }
 

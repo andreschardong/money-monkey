@@ -4,15 +4,7 @@ export type Currency = string;
 export type IsoDate = string;
 
 export type TransactionType =
-  | 'Buy'
-  | 'Sell'
-  | 'Split'
-  | 'Deposit'
-  | 'Withdrawal'
-  | 'Dividend'
-  | 'Interest'
-  | 'Fee'
-  | 'TransferIn';
+  'Buy' | 'Sell' | 'Split' | 'Deposit' | 'Withdrawal' | 'Dividend' | 'Interest' | 'Fee' | 'TransferIn';
 
 export type AssetType = 'Stock' | 'Etf' | 'Fund' | 'Crypto' | 'Other' | 'RealEstate';
 export type PriceSource = 'Yahoo' | 'Manual' | 'AlphaVantage';

@@ -9,7 +9,7 @@ namespace Folio.Core;
 public sealed class PortfolioLedger
 {
     /// <summary>Quantities closer than this are treated as equal (fractional-share rounding).</summary>
-    public const decimal QuantityTolerance = 0.00000001m;
+    public static readonly decimal QuantityTolerance = 0.00000001m;
 
     private readonly Dictionary<Guid, Position> _positions = [];
     private readonly List<RealizedGain> _realized = [];
@@ -62,13 +62,27 @@ public sealed class PortfolioLedger
         ValidateCommon(e);
         switch (e.Type)
         {
-            case TransactionType.Buy: ApplyBuy(e, asTransfer: false); break;
-            case TransactionType.TransferIn: ApplyBuy(e, asTransfer: true); break;
-            case TransactionType.Sell: ApplySell(e); break;
-            case TransactionType.Split: ApplySplit(e); break;
-            case TransactionType.Deposit: ApplyFlow(e, +1); break;
-            case TransactionType.Withdrawal: ApplyFlow(e, -1); break;
-            case TransactionType.Dividend: ApplyDividend(e); break;
+            case TransactionType.Buy:
+                ApplyBuy(e, asTransfer: false);
+                break;
+            case TransactionType.TransferIn:
+                ApplyBuy(e, asTransfer: true);
+                break;
+            case TransactionType.Sell:
+                ApplySell(e);
+                break;
+            case TransactionType.Split:
+                ApplySplit(e);
+                break;
+            case TransactionType.Deposit:
+                ApplyFlow(e, +1);
+                break;
+            case TransactionType.Withdrawal:
+                ApplyFlow(e, -1);
+                break;
+            case TransactionType.Dividend:
+                ApplyDividend(e);
+                break;
             case TransactionType.Interest:
                 Positive(e, e.Amount, "Amount");
                 Interest += e.Amount * e.FxRate;

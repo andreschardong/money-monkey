@@ -23,14 +23,17 @@ export class Auth {
   readonly showGains = computed(() => !this.hideGains());
 
   private readonly settled$ = toObservable(this.me.status).pipe(
-    filter(status => status === 'resolved' || status === 'error' || status === 'local'));
+    filter((status) => status === 'resolved' || status === 'error' || status === 'local'),
+  );
 
   /** True once the first "who am I" request has answered, or failed; the shell shows a spinner until then. */
   readonly settled = toSignal(this.settled$.pipe(map(() => true)), { initialValue: false });
 
   /** Passkeys need a secure context (https, or localhost) and a browser with the WebAuthn JSON helpers. */
   readonly passkeysSupported =
-    typeof PublicKeyCredential !== 'undefined' && window.isSecureContext && typeof PublicKeyCredential.parseRequestOptionsFromJSON === 'function';
+    typeof PublicKeyCredential !== 'undefined' &&
+    window.isSecureContext &&
+    typeof PublicKeyCredential.parseRequestOptionsFromJSON === 'function';
 
   /** Resolves once the first "who am I" request has answered, or failed. */
   async ready(): Promise<void> {
@@ -60,7 +63,9 @@ export class Auth {
   }
 
   async signInWithPasskey(): Promise<Me> {
-    const optionsJson = await firstValueFrom(this.http.post<PublicKeyCredentialRequestOptionsJSON>('/api/auth/passkey/options', null));
+    const optionsJson = await firstValueFrom(
+      this.http.post<PublicKeyCredentialRequestOptionsJSON>('/api/auth/passkey/options', null),
+    );
     const publicKey = PublicKeyCredential.parseRequestOptionsFromJSON(optionsJson);
     const credential = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null;
     if (!credential) {
@@ -72,13 +77,17 @@ export class Auth {
   }
 
   async addPasskey(name: string | null): Promise<Passkey[]> {
-    const optionsJson = await firstValueFrom(this.http.post<PublicKeyCredentialCreationOptionsJSON>('/api/account/passkeys/options', null));
+    const optionsJson = await firstValueFrom(
+      this.http.post<PublicKeyCredentialCreationOptionsJSON>('/api/account/passkeys/options', null),
+    );
     const publicKey = PublicKeyCredential.parseCreationOptionsFromJSON(optionsJson);
     const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null;
     if (!credential) {
       throw new Error('The passkey was not created.');
     }
-    const passkeys = await firstValueFrom(this.http.post<Passkey[]>('/api/account/passkeys', { credential: serialize(credential), name }));
+    const passkeys = await firstValueFrom(
+      this.http.post<Passkey[]>('/api/account/passkeys', { credential: serialize(credential), name }),
+    );
     this.me.reload();
     return passkeys;
   }
@@ -88,7 +97,9 @@ export class Auth {
   }
 
   async removePasskey(id: string): Promise<Passkey[]> {
-    const passkeys = await firstValueFrom(this.http.delete<Passkey[]>(`/api/account/passkeys/${encodeURIComponent(id)}`));
+    const passkeys = await firstValueFrom(
+      this.http.delete<Passkey[]>(`/api/account/passkeys/${encodeURIComponent(id)}`),
+    );
     this.me.reload();
     return passkeys;
   }
@@ -115,7 +126,9 @@ export const authGuard: CanActivateFn = async (_route, state) => {
   if (auth.signedIn()) {
     return true;
   }
-  return router.createUrlTree(['/sign-in'], { queryParams: state.url && state.url !== '/' ? { returnUrl: state.url } : {} });
+  return router.createUrlTree(['/sign-in'], {
+    queryParams: state.url && state.url !== '/' ? { returnUrl: state.url } : {},
+  });
 };
 
 /** The sign-in page has nothing to offer someone who is already in. */
@@ -132,13 +145,18 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const router = inject(Router);
   return next(request).pipe(
     catchError((error: unknown) => {
-      if (error instanceof HttpErrorResponse && error.status === 401
-        && request.url.startsWith('/api/') && !request.url.startsWith('/api/auth/')) {
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        request.url.startsWith('/api/') &&
+        !request.url.startsWith('/api/auth/')
+      ) {
         auth.sessionEnded();
         void router.navigate(['/sign-in'], { queryParams: { returnUrl: router.url }, replaceUrl: true });
       }
       return throwError(() => error);
-    }));
+    }),
+  );
 };
 
 /** Only a path on this site may be returned to after signing in. */
@@ -170,7 +188,10 @@ export function passkeyErrorMessage(error: unknown, publicUrl = ''): string | nu
  * managers break it, so the fields are encoded by hand when that happens.
  */
 function serialize(credential: PublicKeyCredential): string {
-  const withJson = credential as PublicKeyCredential & { toJSON?: () => unknown; authenticatorAttachment?: string | null };
+  const withJson = credential as PublicKeyCredential & {
+    toJSON?: () => unknown;
+    authenticatorAttachment?: string | null;
+  };
   if (typeof withJson.toJSON === 'function') {
     try {
       return JSON.stringify(withJson.toJSON());
@@ -179,7 +200,8 @@ function serialize(credential: PublicKeyCredential): string {
     }
   }
 
-  const raw = credential.response as AuthenticatorAttestationResponse & AuthenticatorAssertionResponse & { getTransports?: () => string[] };
+  const raw = credential.response as AuthenticatorAttestationResponse &
+    AuthenticatorAssertionResponse & { getTransports?: () => string[] };
   const response: Record<string, unknown> = { clientDataJSON: base64Url(raw.clientDataJSON) };
   if (raw.attestationObject) {
     response['attestationObject'] = base64Url(raw.attestationObject);

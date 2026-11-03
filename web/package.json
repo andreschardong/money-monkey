@@ -6,33 +6,47 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test --watch=false",
+    "coverage": "ng test --watch=false --coverage",
+    "architecture": "node scripts/check-architecture.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"scripts/**/*.mjs\" eslint.config.mjs angular.json package.json tsconfig*.json .prettierrc",
+    "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"scripts/**/*.mjs\" eslint.config.mjs angular.json package.json tsconfig*.json .prettierrc"
   },
   "private": true,
   "packageManager": "npm@11.13.0",
   "dependencies": {
-    "@angular/cdk": "^22.2.2",
-    "@angular/common": "^22.2.0",
-    "@angular/compiler": "^22.2.0",
-    "@angular/core": "^22.2.0",
-    "@angular/forms": "^22.2.0",
-    "@angular/material": "^22.2.2",
-    "@angular/platform-browser": "^22.2.0",
-    "@angular/router": "^22.2.0",
-    "@angular/service-worker": "^22.2.0",
+    "@angular/cdk": "^22.2.5",
+    "@angular/common": "^22.2.4",
+    "@angular/compiler": "^22.2.4",
+    "@angular/core": "^22.2.4",
+    "@angular/forms": "^22.2.4",
+    "@angular/material": "^22.2.5",
+    "@angular/platform-browser": "^22.2.4",
+    "@angular/router": "^22.2.4",
+    "@angular/service-worker": "^22.2.4",
     "@fontsource-variable/archivo": "^5.3.0",
-    "@material-symbols/svg-400": "^0.48.0",
+    "@material-symbols/svg-400": "^0.48.2",
     "echarts": "^6.1.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.9.1"
   },
   "devDependencies": {
-    "@angular/build": "^22.2.2",
-    "@angular/cli": "^22.2.2",
-    "@angular/compiler-cli": "^22.2.0",
-    "jsdom": "^30.0.0",
+    "@angular/build": "^22.2.5",
+    "@angular/cli": "^22.2.5",
+    "@angular/compiler-cli": "^22.2.4",
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "angular-eslint": "^22.6.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^30.1.3",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
-    "vitest": "^5.0.0"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

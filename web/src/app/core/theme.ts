@@ -12,10 +12,12 @@ export class Theme {
   private readonly systemDark = signal(this.media?.matches ?? false);
 
   readonly preference = signal<ThemePreference>(readPreference());
-  readonly isDark = computed(() => this.preference() === 'dark' || (this.preference() === 'system' && this.systemDark()));
+  readonly isDark = computed(
+    () => this.preference() === 'dark' || (this.preference() === 'system' && this.systemDark()),
+  );
 
   constructor() {
-    this.media?.addEventListener('change', event => this.systemDark.set(event.matches));
+    this.media?.addEventListener('change', (event) => this.systemDark.set(event.matches));
     effect(() => {
       this.document.documentElement.dataset['theme'] = this.isDark() ? 'dark' : 'light';
     });

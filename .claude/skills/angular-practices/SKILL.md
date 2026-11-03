@@ -5,6 +5,22 @@ description: Conventions for Money Monkey's Angular 22 front end (web/): signals
 
 # Angular practices for this app
 
+## Atomic design (the folder layout of `web/src/app`)
+
+| Folder | What lives there | May import |
+| --- | --- | --- |
+| `atoms/` | One element with no knowledge of the domain: `busy`, `change`, `hero-figure`, `notice`, `echart`, the `appSort` header. Inputs in, DOM out. | `core` |
+| `molecules/` | A few atoms doing one job: `allocation-bar`, `currency-switch`, `panel`, `page-header`, `state-message`, `security-picker`, `confirm-dialog`. | atoms, `core` |
+| `organisms/` | A section or dialog that knows the domain and may inject services: the charts, the holdings, transactions and income tables, `nav-rail`, every `*-dialog`. | molecules, atoms, other organisms, `core` |
+| `templates/` | Page frames with slots and no data of their own: `shell`, `auth-card`. | organisms and below, `core` |
+| `pages/` | Routed components that fetch data and fill a template. One folder per route; lazy-loaded from `app.routes.ts`. | everything below, never another page |
+| `core/` | Services, stores, models, formatting, theme, icons, design tokens (`chart-theme`). No components. | `core` |
+
+- A component is `<layer>/<name>/<name>.ts` (plus `.html` / `.scss` when large) with `<name>.spec.ts` beside it. Pick the
+  lowest layer that fits; promote it only when it starts to know the domain or compose others.
+- Presentational pieces take `input()`s and emit `output()`s; data fetching and commands stay in pages and organisms.
+- `npm run architecture` enforces the table (and that every source file has a spec). It runs in CI.
+
 ## Architecture
 
 - Standalone components, zoneless change detection, signals for all state: `signal`, `computed`, `linkedSignal`,
@@ -50,8 +66,13 @@ description: Conventions for Money Monkey's Angular 22 front end (web/): signals
 
 ## Verify
 
-- Compile: `npx ng build --configuration development`. Unit tests (pure logic such as formatting):
-  `npx ng test --watch=false`.
+- Compile: `npx ng build --configuration development`. Unit tests: `npx ng test --watch=false`. The gate is
+  `npm run coverage` (100 % statements, branches, functions and lines, thresholds in `angular.json`) together with
+  `npm run architecture`.
+- Specs use vitest globals with Angular's `TestBed`: render the component, set inputs with
+  `fixture.componentRef.setInput`, `await fixture.whenStable()`, and assert on the DOM and on emitted outputs, not
+  on private members. HTTP goes through `provideHttpClientTesting()` and `HttpTestingController`; Material dialogs,
+  `Router`, `SwUpdate`, `navigator.credentials` and ECharts are replaced with test doubles from `src/testing/`.
 - Behaviour: the Playwright checks in `tests/browser` against the running container, with registration open.
   Use `context.request` for API calls and downloads (page `fetch` has no cookies; `page.goto` on a download
   throws), use `exact: true` when a label is a prefix of another, and wait for the expected state before reading
