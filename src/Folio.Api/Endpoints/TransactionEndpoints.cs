@@ -32,7 +32,10 @@ public static class TransactionEndpoints
             query = query.Where(t => t.Type == type);
 
         var transactions = await query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Sequence).ToListAsync(ct);
-        return TypedResults.Ok(transactions.Select(PortfolioMapper.ToDto).ToList());
+        var dtos = new List<TransactionDto>(transactions.Count);
+        foreach (var transaction in transactions)
+            dtos.Add(PortfolioMapper.ToDto(transaction));
+        return TypedResults.Ok(dtos);
     }
 
     private static async Task<Results<Created<List<TransactionDto>>, NotFound, ProblemHttpResult>> Create(

@@ -1,15 +1,15 @@
 using System.Net;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.HttpOverrides;
 using Folio.Api.Auth;
 using Folio.Api.Data;
 using Folio.Api.Endpoints;
 using Folio.Api.MarketData;
 using Folio.Api.Portfolios;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -24,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
 // Hosts such as Railway and Render say which port to listen on through PORT.
-if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } port && string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_URLS"]))
+if (builder.Configuration["PORT"] is { Length: > 0 } port && string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_URLS"]))
     builder.WebHost.UseUrls($"http://*:{port}");
 
 // Logging: Serilog to the console, plus daily files when LogFile:Path is set (logs/ next to docker-compose.yml).
@@ -35,7 +35,8 @@ builder.Services.AddSerilog((services, logger) =>
         .Enrich.FromLogContext()
         .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}");
 
-    if (builder.Configuration["LogFile:Path"] is { Length: > 0 } path)
+    var path = builder.Configuration["LogFile:Path"];
+    if (!string.IsNullOrEmpty(path))
     {
         logger.WriteTo.File(path, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}");
@@ -50,10 +51,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddDbContext<FolioDbContext>((services, options) => options
     // DATABASE_URL (the form cloud hosts hand out) wins over the appsettings default when both are present.
-    .UseNpgsql(DatabaseUrl.ToConnectionString(
-        Environment.GetEnvironmentVariable("DATABASE_URL") is { Length: > 0 } databaseUrl ? databaseUrl
-        : services.GetRequiredService<IConfiguration>().GetConnectionString("Folio")
-        ?? throw new InvalidOperationException("Set ConnectionStrings:Folio (or DATABASE_URL) to the PostgreSQL connection.")))
+    .UseNpgsql(DatabaseUrl.Resolve(services.GetRequiredService<IConfiguration>()))
     .UseSnakeCaseNamingConvention()
     // Transactions and suggestions are reached through an already-checked portfolio, so the portfolio filter suffices.
     .ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
@@ -71,7 +69,8 @@ builder.Services.AddIdentityCore<AppUser>(options =>
     .AddSignInManager();
 builder.Services.Configure<IdentityPasskeyOptions>(options =>
 {
-    options.ServerDomain = builder.Configuration["Auth:PasskeyDomain"] ?? "localhost";
+    var passkeyDomain = builder.Configuration["Auth:PasskeyDomain"];
+    options.ServerDomain = string.IsNullOrEmpty(passkeyDomain) ? "localhost" : passkeyDomain;
     options.UserVerificationRequirement = "required";
     options.ResidentKeyRequirement = "required";
     options.AuthenticatorTimeout = TimeSpan.FromMinutes(3);
@@ -79,7 +78,8 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 // Removing a passkey or signing out everywhere changes the security stamp; sessions re-check it this often.
 builder.Services.Configure<SecurityStampValidatorOptions>(options => options.ValidationInterval = TimeSpan.FromMinutes(5));
-var publicUrl = builder.Configuration["Auth:PublicUrl"] ?? "http://localhost:8090";
+var configuredPublicUrl = builder.Configuration["Auth:PublicUrl"];
+var publicUrl = string.IsNullOrEmpty(configuredPublicUrl) ? "http://localhost:8090" : configuredPublicUrl;
 // A passkey ceremony carries the page's origin; behind a TLS-terminating proxy the request itself may say
 // http, so the public address is the origin of record (the request's own origin stays fine for development).
 // The Android app's passkey ceremonies carry "android:apk-key-hash:<certificate hash>" as their origin.
@@ -116,7 +116,7 @@ builder.Services.ConfigureApplicationCookie(options =>
             return;
 
         var allowed = context.HttpContext.RequestServices.GetRequiredService<IOptionsMonitor<AuthOptions>>().CurrentValue;
-        var email = context.Principal.FindFirstValue(ClaimTypes.Email) ?? context.Principal.Identity?.Name;
+        var email = context.Principal.FindFirstValue(ClaimTypes.Email) ?? context.Principal.FindFirstValue(ClaimTypes.Name);
         if (!allowed.IsAllowed(email))
         {
             context.RejectPrincipal();
@@ -139,6 +139,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddDataProtection().SetApplicationName("Folio").PersistKeysToDbContext<FolioDbContext>();
 
+builder.Services.AddSingleton<Func<MailKit.Net.Smtp.ISmtpClient>>(() => new MailKit.Net.Smtp.SmtpClient());
 builder.Services.AddSingleton<IMailer, SmtpMailer>();
 builder.Services.AddScoped<EmailLinkService>();
 builder.Services.AddRateLimiter(options =>
@@ -301,10 +302,10 @@ api.MapMarketEndpoints();
 app.MapGet("/health", () => TypedResults.Ok(new { status = "ok" })).ExcludeFromDescription();
 // Digital Asset Links: lets the Android app use this site's passkeys and open its sign-in links.
 app.MapGet("/.well-known/assetlinks.json", () => TypedResults.Json(androidApps.Select(a => new
-    {
-        relation = new[] { "delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds" },
-        target = new { @namespace = "android_app", package_name = a.PackageName, sha256_cert_fingerprints = a.Fingerprints },
-    })))
+{
+    relation = new[] { "delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds" },
+    target = new { @namespace = "android_app", package_name = a.PackageName, sha256_cert_fingerprints = a.Fingerprints },
+})))
     .AllowAnonymous()
     .ExcludeFromDescription();
 app.MapFallback("/api/{**path}", () => TypedResults.NotFound()).ExcludeFromDescription();

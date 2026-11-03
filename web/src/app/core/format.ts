@@ -20,7 +20,11 @@ function withMinus(text: string): string {
 }
 
 /** "$1,234.56" for CAD, "US$1,234.56" for USD, "€1,234.56" for EUR: the Canadian convention. */
-export function formatMoney(value: number | null | undefined, currency: Currency, options: { signed?: boolean; decimals?: number } = {}): string {
+export function formatMoney(
+  value: number | null | undefined,
+  currency: Currency,
+  options: { signed?: boolean; decimals?: number } = {},
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
@@ -44,25 +48,29 @@ export function formatPrice(value: number | null | undefined, currency: Currency
   }
   const decimals = Math.abs(value) < 1 && value !== 0 ? 4 : 2;
   const key = `p|${currency}|${decimals}`;
-  return withMinus(numberFormat(key, {
-    style: 'currency',
-    currency,
-    currencyDisplay: 'symbol',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: decimals,
-  }).format(value));
+  return withMinus(
+    numberFormat(key, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'symbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: decimals,
+    }).format(value),
+  );
 }
 
 /** "$1.2M", "$150K"; `digits` fixes the decimals shown ("$1.20M" with 2). */
 export function formatCompactMoney(value: number, currency: Currency, digits = 1): string {
-  return withMinus(numberFormat(`c|${currency}|${digits}`, {
-    style: 'currency',
-    currency,
-    currencyDisplay: 'symbol',
-    notation: 'compact',
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value));
+  return withMinus(
+    numberFormat(`c|${currency}|${digits}`, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'symbol',
+      notation: 'compact',
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    }).format(value),
+  );
 }
 
 /** The tick interval ECharts picks for a span: 1, 2, 3, 5 or 10 times a power of ten. */
@@ -78,8 +86,12 @@ function niceInterval(span: number, ticks: number): number {
  * tick spacing, so a zoomed-in axis reads "$1.16M, $1.18M, $1.20M" rather than "$1.2M" three times, while a wide
  * one keeps "$100K, $150K". Ticks closer than a thousandth of their unit fall back to the full amount.
  */
-export function compactAxisFormatter(values: readonly number[], currency: Currency, ticks = 4): (value: number) => string {
-  const finite = values.filter(v => Number.isFinite(v));
+export function compactAxisFormatter(
+  values: readonly number[],
+  currency: Currency,
+  ticks = 4,
+): (value: number) => string {
+  const finite = values.filter((v) => Number.isFinite(v));
   const span = finite.length ? Math.max(...finite) - Math.min(...finite) : 0;
   const interval = span > 0 ? niceInterval(span, ticks) : 0;
   const intervalExponent = interval > 0 ? Math.floor(Math.log10(interval) + 1e-9) : 0;
@@ -92,18 +104,23 @@ export function compactAxisFormatter(values: readonly number[], currency: Curren
 }
 
 /** Ratios arrive as fractions (0.0123); shown as "+1.23%". */
-export function formatPercent(value: number | null | undefined, options: { signed?: boolean; decimals?: number } = {}): string {
+export function formatPercent(
+  value: number | null | undefined,
+  options: { signed?: boolean; decimals?: number } = {},
+): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
   const decimals = options.decimals ?? 2;
   const key = `%|${options.signed ?? true}|${decimals}`;
-  return withMinus(numberFormat(key, {
-    style: 'percent',
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-    signDisplay: options.signed ?? true ? 'exceptZero' : 'auto',
-  }).format(value));
+  return withMinus(
+    numberFormat(key, {
+      style: 'percent',
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      signDisplay: (options.signed ?? true) ? 'exceptZero' : 'auto',
+    }).format(value),
+  );
 }
 
 export function formatQuantity(value: number | null | undefined): string {
@@ -117,10 +134,25 @@ export function formatRate(value: number): string {
   return numberFormat('r', { minimumFractionDigits: 4, maximumFractionDigits: 6 }).format(value);
 }
 
-const dateFormat = new Intl.DateTimeFormat(LOCALE, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const dateFormat = new Intl.DateTimeFormat(LOCALE, {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
 const shortDateFormat = new Intl.DateTimeFormat(LOCALE, { month: 'short', day: 'numeric', timeZone: 'UTC' });
-const weekdayFormat = new Intl.DateTimeFormat(LOCALE, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const weekdayFormat = new Intl.DateTimeFormat(LOCALE, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
 
 /** Dates from the API are calendar days; they are formatted in UTC so no time zone shifts them. */
 export function formatDate(iso: IsoDate | null | undefined, style: 'long' | 'short' | 'weekday' = 'long'): string {
@@ -225,4 +257,12 @@ export class TransactionLabelPipe implements PipeTransform {
   }
 }
 
-export const FORMAT_PIPES = [MoneyPipe, PricePipe, PercentPipe, QuantityPipe, DayPipe, WhenPipe, TransactionLabelPipe] as const;
+export const FORMAT_PIPES = [
+  MoneyPipe,
+  PricePipe,
+  PercentPipe,
+  QuantityPipe,
+  DayPipe,
+  WhenPipe,
+  TransactionLabelPipe,
+] as const;

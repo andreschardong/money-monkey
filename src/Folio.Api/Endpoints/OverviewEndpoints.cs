@@ -81,10 +81,8 @@ public static class OverviewEndpoints
             anyContributions |= earned is not null;
             contributions += deposits;
             cash += ToDisplay(v.CashValue, baseCurrency);
-            if (v.PricesAsOf > pricesAsOf || pricesAsOf is null)
-                pricesAsOf = v.PricesAsOf;
-            if (v.DayChangeDate > dayChangeDate || dayChangeDate is null)
-                dayChangeDate = v.DayChangeDate;
+            pricesAsOf = Newest(pricesAsOf, v.PricesAsOf);
+            dayChangeDate = Newest(dayChangeDate, v.DayChangeDate);
 
             foreach (var holding in v.Holdings)
             {
@@ -158,7 +156,7 @@ public static class OverviewEndpoints
         var sum = positive.Sum(v => v.Value);
         return positive
             .OrderByDescending(v => v.Value)
-            .Select(v => new AllocationDto(v.Key, label(v.Key), Money(v.Value), sum > 0 ? Ratio(v.Value / sum)!.Value : 0m))
+            .Select(v => new AllocationDto(v.Key, label(v.Key), Money(v.Value), Ratio(v.Value / sum)!.Value))
             .ToList();
     }
 

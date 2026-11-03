@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings for `dotnet-coverage collect` (see coverage.ps1). Only the application assemblies are measured,
+     and the only exclusions are generated code: EF Core's migrations, and what the compiler's source generators
+     write under obj/ (the OpenAPI XML-comment support). Nothing else is excluded here: anything skipped in code
+     carries [ExcludeFromCodeCoverage] with a reason beside it. -->
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*[\\/]Folio\.Api\.dll$</ModulePath>
+        <ModulePath>.*[\\/]Folio\.Core\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+    <Sources>
+      <Exclude>
+        <Source>.*[\\/]Data[\\/]Migrations[\\/].*</Source>
+        <Source>.*[\\/]obj[\\/].*</Source>
+      </Exclude>
+    </Sources>
+  </CodeCoverage>
+</Configuration>
