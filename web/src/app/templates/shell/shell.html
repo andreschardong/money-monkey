@@ -1,0 +1,40 @@
+<!-- One outlet whatever the sign-in state, so a page is never re-created mid-flow when the session starts. -->
+<mat-sidenav-container class="container">
+  @if (auth.signedIn()) {
+    <mat-sidenav
+      class="rail"
+      [mode]="wide() ? 'side' : 'over'"
+      [opened]="wide() || menuOpen()"
+      (closedStart)="menuOpen.set(false)"
+      [disableClose]="wide()"
+    >
+      <nav appNavRail></nav>
+    </mat-sidenav>
+  }
+
+  <mat-sidenav-content class="content" [class.bare]="!auth.signedIn()">
+    @if (navigating()) {
+      <mat-progress-bar class="nav-progress" mode="indeterminate" aria-label="Loading the page" />
+    }
+    @if (auth.signedIn()) {
+      @if (!wide()) {
+        <header class="topbar">
+          <button mat-icon-button (click)="menuOpen.set(true)" aria-label="Open navigation">
+            <mat-icon svgIcon="menu" />
+          </button>
+          <a class="brand" routerLink="/">Money Monkey</a>
+        </header>
+      }
+    } @else {
+      <button class="bare-theme" type="button" (click)="theme.cycle()" [attr.aria-label]="themeLabel()">
+        <mat-icon [svgIcon]="themeIcon()" />
+      </button>
+    }
+    <main>
+      @if (!auth.settled()) {
+        <app-busy label="Loading Money Monkey…" />
+      }
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

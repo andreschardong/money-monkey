@@ -4,7 +4,7 @@
 // Tokens. "Ink and loonie": ink-blue text on cool paper, harbour blue for action
 // and the value series, loonie brass for deposits and selection. Chart slots are
 // validated (OKLCH band, chroma, CVD) for both surfaces; keep them in sync with
-// src/app/shared/chart-theme.ts.
+// src/app/core/chart-theme.ts.
 // ---------------------------------------------------------------------------
 :root {
   color-scheme: light;
@@ -80,40 +80,54 @@
 
 // Material picks up the same palette through its system tokens.
 html {
-  @include mat.theme((
-    color: (primary: mat.$azure-palette, tertiary: mat.$orange-palette, theme-type: color-scheme),
-    typography: (plain-family: 'Archivo Variable', brand-family: 'Archivo Variable'),
-    density: -1,
-  ), $overrides: (
-    primary: var(--harbour),
-    on-primary: var(--on-harbour),
-    primary-container: var(--harbour-wash),
-    on-primary-container: var(--harbour-ink),
-    secondary-container: var(--harbour-wash),
-    on-secondary-container: var(--harbour-ink),
-    surface: var(--card),
-    on-surface: var(--ink),
-    on-surface-variant: var(--ink-2),
-    surface-container-lowest: var(--card),
-    surface-container-low: var(--card),
-    surface-container: var(--card-raised),
-    surface-container-high: var(--card-raised),
-    surface-container-highest: var(--wash),
-    background: var(--paper),
-    on-background: var(--ink),
-    outline: var(--rule-strong),
-    outline-variant: var(--rule),
-    error: var(--loss),
-  ));
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$orange-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: 'Archivo Variable',
+        brand-family: 'Archivo Variable',
+      ),
+      density: -1,
+    ),
+    $overrides: (
+      primary: var(--harbour),
+      on-primary: var(--on-harbour),
+      primary-container: var(--harbour-wash),
+      on-primary-container: var(--harbour-ink),
+      secondary-container: var(--harbour-wash),
+      on-secondary-container: var(--harbour-ink),
+      surface: var(--card),
+      on-surface: var(--ink),
+      on-surface-variant: var(--ink-2),
+      surface-container-lowest: var(--card),
+      surface-container-low: var(--card),
+      surface-container: var(--card-raised),
+      surface-container-high: var(--card-raised),
+      surface-container-highest: var(--wash),
+      background: var(--paper),
+      on-background: var(--ink),
+      outline: var(--rule-strong),
+      outline-variant: var(--rule),
+      error: var(--loss)
+    )
+  );
 
-  @include mat.dialog-overrides((
-    container-shape: var(--radius-l),
-  ));
-  @include mat.snack-bar-overrides((
-    container-color: var(--ink),
-    supporting-text-color: var(--paper),
-    button-color: var(--brass),
-  ));
+  @include mat.dialog-overrides(
+    (
+      container-shape: var(--radius-l),
+    )
+  );
+  @include mat.snack-bar-overrides(
+    (
+      container-color: var(--ink),
+      supporting-text-color: var(--paper),
+      button-color: var(--brass),
+    )
+  );
 }
 
 // ---------------------------------------------------------------------------

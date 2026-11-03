@@ -133,7 +133,7 @@ public static class ExportEndpoints
                 DateOnly d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 decimal m => m.ToString("0.##########", CultureInfo.InvariantCulture),
                 TransactionType t => t.ToString(),
-                _ => Convert.ToString(cell, CultureInfo.InvariantCulture) ?? string.Empty,
+                _ => Convert.ToString(cell, CultureInfo.InvariantCulture)!,
             };
             return text.IndexOfAny([',', '"', '\n', '\r']) >= 0 ? $"\"{text.Replace("\"", "\"\"")}\"" : text;
         }

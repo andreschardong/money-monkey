@@ -10,6 +10,15 @@ namespace Folio.Api.Data;
 /// </summary>
 public static class DatabaseUrl
 {
+    /// <summary>
+    /// The connection string to use: DATABASE_URL (the form cloud hosts hand out) wins over
+    /// <c>ConnectionStrings:Folio</c> when both are present.
+    /// </summary>
+    public static string Resolve(IConfiguration configuration) => ToConnectionString(
+        configuration["DATABASE_URL"] is { Length: > 0 } databaseUrl ? databaseUrl
+        : configuration.GetConnectionString("Folio")
+        ?? throw new InvalidOperationException("Set ConnectionStrings:Folio (or DATABASE_URL) to the PostgreSQL connection."));
+
     public static string ToConnectionString(string value)
     {
         value = value.Trim();
@@ -37,7 +46,10 @@ public static class DatabaseUrl
         var query = HttpUtility.ParseQueryString(uri.Query);
         foreach (var key in query.AllKeys)
         {
-            if (key is null || query[key] is not { Length: > 0 } option)
+            if (key is null)
+                continue;
+            var option = query[key];
+            if (string.IsNullOrEmpty(option))
                 continue;
             var keyword = key.ToLowerInvariant() switch
             {
@@ -75,6 +87,6 @@ public static class DatabaseUrl
     private static string Quote(string value) =>
         value.IndexOfAny([';', '\'', ' ']) >= 0 ? $"'{value.Replace("'", "''")}'" : value;
 
-    private static string Capitalize(string value) =>
-        value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..].ToLowerInvariant();
+    /// <summary>Only called with a non-empty option value.</summary>
+    private static string Capitalize(string value) => char.ToUpperInvariant(value[0]) + value[1..].ToLowerInvariant();
 }

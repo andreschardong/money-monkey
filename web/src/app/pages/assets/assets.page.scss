@@ -1,0 +1,141 @@
+:host {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.hero {
+  display: grid;
+  gap: 12px;
+  padding: 4px 0 8px;
+  transition: opacity 120ms ease;
+
+  &.refreshing {
+    opacity: 0.6;
+  }
+}
+
+.title {
+  font-size: 1.75rem;
+}
+
+.lede {
+  color: var(--ink-2);
+}
+
+.figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  --hero-size: clamp(2.25rem, 4vw, 3rem);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 36px;
+  margin: 4px 0 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  dt {
+    color: var(--ink-3);
+    font-size: 0.8125rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+}
+
+section.panel {
+  --panel-padding: 8px 22px 12px;
+  --panel-padding-s: 8px 22px 12px;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+.ticker {
+  margin-right: 8px;
+  font-size: 0.9375rem;
+}
+
+.name {
+  max-width: 280px;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Which portfolios hold it, as a quiet line under the name.
+.where {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+
+  a {
+    color: var(--ink-2);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .num {
+    margin-left: 4px;
+  }
+}
+
+.cash td {
+  background: color-mix(in srgb, var(--wash) 55%, transparent);
+}
+
+.cash-label {
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+.small {
+  font-size: 0.8125rem;
+}
+
+.empty {
+  padding: 20px 0;
+}
+
+@media (max-width: 900px) {
+  .hide-m {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .hide-s,
+  .local {
+    display: none;
+  }
+
+  section.panel {
+    --panel-padding: 4px 8px 8px;
+    --panel-padding-s: 4px 8px 8px;
+  }
+
+  .name {
+    max-width: 150px;
+  }
+
+  table.data th,
+  table.data td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+}

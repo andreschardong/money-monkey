@@ -12,7 +12,8 @@ export class PortfolioList {
   // request so a switch to another account (via an email link) refetches instead of keeping the old list.
   readonly resource = httpResource<PortfolioSummary[]>(
     () => (this.auth.signedIn() ? `/api/portfolios?account=${encodeURIComponent(this.auth.email() ?? '')}` : undefined),
-    { defaultValue: [] });
+    { defaultValue: [] },
+  );
 
   /** True once the list has come back; the default empty list doesn't count as "no portfolios". */
   readonly loaded = computed(() => this.resource.status() === 'resolved' || this.resource.status() === 'local');
@@ -29,8 +30,9 @@ export class MarketStatusStore {
   private readonly list = inject(PortfolioList);
   private lastFinished = '';
 
-  readonly resource = httpResource<MarketStatus>(
-    () => (this.auth.signedIn() ? `/api/market/status?account=${encodeURIComponent(this.auth.email() ?? '')}` : undefined));
+  readonly resource = httpResource<MarketStatus>(() =>
+    this.auth.signedIn() ? `/api/market/status?account=${encodeURIComponent(this.auth.email() ?? '')}` : undefined,
+  );
 
   /** Today in the market's time zone, for labelling day changes. */
   readonly today = computed(() => (this.resource.hasValue() ? this.resource.value().today : null));
@@ -40,17 +42,20 @@ export class MarketStatusStore {
 
   constructor() {
     // Quotes refresh every 15 minutes while markets are open; look for a newer run while the page is in view.
-    setInterval(() => {
-      if (this.auth.signedIn() && document.visibilityState === 'visible') {
-        this.resource.reload();
-      }
-    }, 5 * 60 * 1000);
+    setInterval(
+      () => {
+        if (this.auth.signedIn() && document.visibilityState === 'visible') {
+          this.resource.reload();
+        }
+      },
+      5 * 60 * 1000,
+    );
 
     effect(() => {
-      const finished = this.resource.hasValue() ? this.resource.value().lastRun?.finishedAt ?? '' : '';
+      const finished = this.resource.hasValue() ? (this.resource.value().lastRun?.finishedAt ?? '') : '';
       if (finished && this.lastFinished && finished !== this.lastFinished) {
         untracked(() => {
-          this.pricesVersion.update(v => v + 1);
+          this.pricesVersion.update((v) => v + 1);
           this.list.reload();
         });
       }

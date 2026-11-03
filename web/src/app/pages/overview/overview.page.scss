@@ -1,0 +1,152 @@
+:host {
+  display: grid;
+  // Lets wide tables scroll inside their panel instead of widening the page.
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.hero {
+  display: grid;
+  gap: 14px;
+  padding: 4px 0 12px;
+  transition: opacity 120ms ease;
+
+  &.refreshing {
+    opacity: 0.6;
+  }
+}
+
+.title {
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.real-estate {
+  font-size: 0.875rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 36px;
+  margin: 4px 0 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  dt {
+    color: var(--ink-3);
+    font-size: 0.8125rem;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+}
+
+// Panels here sit a little roomier than the default, and the table in the portfolios panel gets air above it.
+section.panel {
+  --panel-padding: 20px 22px;
+  --panel-heading-gap: 4px;
+
+  table.data {
+    margin-top: 8px;
+  }
+}
+
+section.chart-panel {
+  --panel-padding: 16px 22px 20px;
+}
+
+.caption {
+  margin-bottom: 16px;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+}
+
+.row-link {
+  margin-right: 8px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.small {
+  font-size: 0.8125rem;
+}
+
+.movers {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr) auto 90px;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.875rem;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+
+  .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  app-change {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 760px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hide-s {
+    display: none;
+  }
+
+  section.panel {
+    --panel-padding: 16px;
+    --panel-padding-s: 16px;
+  }
+
+  .movers li {
+    grid-template-columns: 64px minmax(0, 1fr) 80px;
+
+    .price {
+      display: none;
+    }
+  }
+}

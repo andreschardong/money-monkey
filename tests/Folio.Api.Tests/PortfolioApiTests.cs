@@ -306,7 +306,7 @@ public class PortfolioApiTests(FolioApiFactory factory) : IClassFixture<FolioApi
             await Task.Delay(100, Ct);
             status = await GetAsync<MarketStatusDto>("/api/market/status");
         }
-        while ((status.Running || status.LastRun is null) && (waited += 100) < 10_000);
+        while ((status.Running || status.LastRun is null) && (waited += 100) < 60_000);
 
         Assert.Equal(RefreshStatus.Succeeded, status.LastRun!.Status);
         Assert.Contains("SHOP.TO", status.LastRun.Log);

@@ -27,7 +27,7 @@ public interface IMailer
 }
 
 /// <summary>Sends mail over SMTP: Mailpit on this PC, or any provider's SMTP server when configured.</summary>
-public sealed class SmtpMailer(IOptions<EmailOptions> options, ILogger<SmtpMailer> logger) : IMailer
+public sealed class SmtpMailer(IOptions<EmailOptions> options, ILogger<SmtpMailer> logger, Func<ISmtpClient> createClient) : IMailer
 {
     public async Task SendAsync(string to, string subject, string html, string text, CancellationToken ct)
     {
@@ -38,7 +38,7 @@ public sealed class SmtpMailer(IOptions<EmailOptions> options, ILogger<SmtpMaile
         message.Subject = subject;
         message.Body = new BodyBuilder { HtmlBody = html, TextBody = text }.ToMessageBody();
 
-        using var client = new SmtpClient();
+        using var client = createClient();
         await client.ConnectAsync(settings.Host, settings.Port, settings.Security, ct);
         if (!string.IsNullOrEmpty(settings.User))
             await client.AuthenticateAsync(settings.User, settings.Password ?? string.Empty, ct);

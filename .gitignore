@@ -516,3 +516,7 @@ android/captures/
 *.jks
 *.keystore
 
+
+# Output of coverage.ps1; the settings file that drives it is source.
+/coverage/
+!coverage.settings.xml

@@ -1,0 +1,139 @@
+import { httpResource } from '@angular/common/http';
+import { Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIcon } from '@angular/material/icon';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
+import { Router, RouterLink } from '@angular/router';
+import { Auth } from '../../core/auth';
+import { countryName } from '../../core/countries';
+import { FORMAT_PIPES, sessionLabel } from '../../core/format';
+import { Allocation, History, IsoDate, Overview, OverviewPortfolio, PortfolioSummary, Range } from '../../core/models';
+import { DisplayCurrency, MarketStatusStore, PortfolioList, RealEstateFilter } from '../../core/stores';
+import { PortfolioDialog } from '../../organisms/portfolio-dialog/portfolio-dialog';
+import { CurrencySwitch } from '../../molecules/currency-switch/currency-switch';
+import { AllocationBar } from '../../molecules/allocation-bar/allocation-bar';
+import { Panel } from '../../molecules/panel/panel';
+import { StateMessage } from '../../molecules/state-message/state-message';
+import { Busy } from '../../atoms/busy/busy';
+import { Change } from '../../atoms/change/change';
+import { HeroFigure } from '../../atoms/hero-figure/hero-figure';
+import { Notice } from '../../atoms/notice/notice';
+import { SortHeader, TableSort } from '../../atoms/table-sort/table-sort';
+import { ValueChart } from '../../organisms/value-chart/value-chart';
+
+@Component({
+  selector: 'app-overview-page',
+  imports: [
+    RouterLink,
+    MatButtonModule,
+    MatIcon,
+    MatSlideToggle,
+    Busy,
+    Change,
+    HeroFigure,
+    Notice,
+    ValueChart,
+    AllocationBar,
+    CurrencySwitch,
+    Panel,
+    SortHeader,
+    StateMessage,
+    ...FORMAT_PIPES,
+  ],
+  templateUrl: './overview.page.html',
+  styleUrl: './overview.page.scss',
+})
+export class OverviewPage {
+  private readonly dialog = inject(MatDialog);
+  private readonly router = inject(Router);
+  private readonly list = inject(PortfolioList);
+  protected readonly display = inject(DisplayCurrency);
+  protected readonly realEstate = inject(RealEstateFilter);
+  protected readonly auth = inject(Auth);
+  private readonly marketStatus = inject(MarketStatusStore);
+
+  protected readonly range = signal<Range>('1Y');
+
+  /** The switch is always there, so the option can be found before any portfolio is marked as real estate. */
+  private readonly filter = computed(() => (this.realEstate.include() ? '' : '&excludeRealEstate=true'));
+
+  private readonly overviewResource = httpResource<Overview>(
+    () => `/api/overview?currency=${this.display.value()}${this.filter()}`,
+  );
+  private readonly historyResource = httpResource<History>(
+    () => `/api/overview/history?currency=${this.display.value()}&range=${this.range()}${this.filter()}`,
+  );
+
+  /** The last loaded value is kept while a new currency or range loads, so the page never blanks. */
+  /** Reload when a quote refresh finishes, so "Today" keeps up while the page stays open. */
+  private readonly reloadOnNewPrices = effect(() => {
+    if (this.marketStatus.pricesVersion() > 0) {
+      untracked(() => {
+        this.overviewResource.reload();
+        this.historyResource.reload();
+      });
+    }
+  });
+
+  protected dayLabel(session: IsoDate | null): string {
+    return sessionLabel(session, this.marketStatus.today());
+  }
+
+  protected readonly overview = linkedSignal<Overview | undefined, Overview | undefined>({
+    source: () => (this.overviewResource.hasValue() ? this.overviewResource.value() : undefined),
+    computation: (next, previous) => next ?? previous?.value,
+  });
+  protected readonly history = linkedSignal<History | undefined, History | undefined>({
+    source: () => (this.historyResource.hasValue() ? this.historyResource.value() : undefined),
+    computation: (next, previous) => next ?? previous?.value,
+  });
+
+  protected readonly countryName = countryName;
+  /** Country slices with their names; the server sends codes so the two never disagree on wording. */
+  protected byCountry(o: Overview): Allocation[] {
+    return o.byCountry.map((a) => ({ ...a, label: a.key ? countryName(a.key) : a.label }));
+  }
+
+  protected hasCountries(o: Overview): boolean {
+    return o.byCountry.some((a) => a.key !== '');
+  }
+
+  /** Creation order until a column is clicked. */
+  protected readonly portfolioSort = new TableSort();
+
+  protected sortedPortfolios(o: Overview): OverviewPortfolio[] {
+    return this.portfolioSort.apply(o.portfolios, {
+      name: (p) => p.name,
+      value: (p) => p.valueInDisplay,
+      today: (p) => p.dayChangeInDisplay,
+      return: (p) => p.totalReturnInDisplay,
+    });
+  }
+
+  protected readonly loadingOverview = computed(() => this.overviewResource.isLoading());
+  protected readonly loadingHistory = computed(() => this.historyResource.isLoading());
+  protected readonly failed = computed(() => !!this.overviewResource.error() && !this.overview());
+  protected readonly empty = computed(() => this.list.loaded() && this.list.resource.value().length === 0);
+
+  protected open(id: string): void {
+    void this.router.navigate(['/portfolios', id]);
+  }
+
+  protected createPortfolio(): void {
+    this.dialog
+      .open(PortfolioDialog, { autoFocus: 'first-tabbable' })
+      .afterClosed()
+      .subscribe((created?: PortfolioSummary) => {
+        if (created) {
+          this.list.reload();
+          void this.router.navigate(['/portfolios', created.id]);
+        }
+      });
+  }
+
+  protected retry(): void {
+    this.overviewResource.reload();
+    this.historyResource.reload();
+  }
+}
