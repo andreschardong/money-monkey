@@ -47,4 +47,4 @@ Project skills with the conventions to follow: `.claude/skills/angular-practices
 - Verify end to end before reporting anything as done: build, the test executables, and the browser checks that
   touch the change. Patch scripts must be idempotent; check for a unique marker rather than "new text already
   present", which duplicated a property once.
-- Commit only when asked. Commits and pull requests end with the attribution lines Claude Code provides.
+- Commit only when asked.
