@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 namespace Folio.Api.Tests;
 
@@ -50,14 +51,24 @@ public sealed class RequestTracker
 /// <summary>
 /// Lets a test send requests whose signed-in user has no identity at all (<c>X-Test-Principal: NoIdentity</c>) or has
 /// no user id (<c>NoUserId</c>), which the cookie never produces, and tells the <see cref="RequestTracker"/> when a
-/// request (<c>X-Test-Request: id</c>) is finished.
+/// request (<c>X-Test-Request: id</c>) is finished. It also keeps cookies on the app's clock: the app dates a cookie's
+/// expiry from the fixed test clock, while the test client's cookie jar reads the real one, so once the real date
+/// passed that expiry every signed-in request would arrive without its session.
 /// </summary>
-public sealed class TestPipelineFilter(RequestTracker tracker) : IStartupFilter
+public sealed class TestPipelineFilter(RequestTracker tracker, TimeProvider time) : IStartupFilter
 {
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
     {
         app.Use(async (context, pipeline) =>
         {
+            context.Response.OnStarting(() =>
+            {
+                var cookies = context.Response.Headers.SetCookie;
+                if (cookies.Count > 0)
+                    context.Response.Headers.SetCookie = cookies.Select(cookie => WithoutFutureExpiry(cookie, time.GetUtcNow())).ToArray();
+                return Task.CompletedTask;
+            });
+
             switch (context.Request.Headers["X-Test-Principal"].ToString())
             {
                 case "NoIdentity":
@@ -81,6 +92,19 @@ public sealed class TestPipelineFilter(RequestTracker tracker) : IStartupFilter
         });
         next(app);
     };
+
+    /// <summary>
+    /// A cookie that is still valid on the app's clock becomes a session cookie, so the client keeps it whatever the
+    /// real date is; the app still enforces the expiry inside the ticket. A cookie being deleted keeps its past date.
+    /// </summary>
+    private static string? WithoutFutureExpiry(string? cookie, DateTimeOffset now)
+    {
+        if (!SetCookieHeaderValue.TryParse(cookie, out var parsed) || parsed.Expires is not { } expires || expires <= now)
+            return cookie;
+
+        parsed.Expires = null;
+        return parsed.ToString();
+    }
 }
 
 /// <summary>Signs people in without the email claim when the script says so, as an older cookie would have been.</summary>
