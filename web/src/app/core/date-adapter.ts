@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { NativeDateAdapter } from '@angular/material/core';
+import { toIsoDate } from './format';
 
 /**
  * The native adapter parses a typed "2026-10-09" as midnight UTC, which is the evening before in Toronto.
@@ -19,5 +20,13 @@ export class LocalDateAdapter extends NativeDateAdapter {
       }
     }
     return super.parse(value, parseFormat);
+  }
+
+  /**
+   * The native adapter writes the UTC day, which is already tomorrow during a Canadian evening. The date picker puts
+   * this in its min and max attributes, and those are calendar days too.
+   */
+  override toIso8601(date: Date): string {
+    return toIsoDate(date);
   }
 }

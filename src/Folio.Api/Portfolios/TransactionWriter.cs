@@ -25,17 +25,20 @@ public sealed class TransactionWriter(FolioDbContext db, MarketDataService marke
         if (transaction is null)
             return WriteResult.Fail(error!);
 
-        var sequence = await db.Transactions.Where(t => t.PortfolioId == portfolio.Id).MaxAsync(t => (long?)t.Sequence, ct) ?? 0;
-        transaction.Sequence = sequence + 1;
+        return await LockedAsync(portfolio.Id, async () =>
+        {
+            var sequence = await db.Transactions.Where(t => t.PortfolioId == portfolio.Id).MaxAsync(t => (long?)t.Sequence, ct) ?? 0;
+            transaction.Sequence = sequence + 1;
 
-        var entries = await LoadEntriesAsync(portfolio.Id, ct);
-        entries.Add(transaction.ToLedgerEntry());
-        if (Validate(portfolio, entries, transaction.Id) is { } problem)
-            return WriteResult.Fail(problem);
+            var entries = await LoadEntriesAsync(portfolio.Id, ct);
+            entries.Add(transaction.ToLedgerEntry());
+            if (Validate(portfolio, entries, transaction.Id) is { } problem)
+                return WriteResult.Fail(problem);
 
-        db.Transactions.Add(transaction);
-        await db.SaveChangesAsync(ct);
-        return new WriteResult([transaction], null);
+            db.Transactions.Add(transaction);
+            await db.SaveChangesAsync(ct);
+            return new WriteResult([transaction], null);
+        }, ct);
     }
 
     public async Task<WriteResult> UpdateAsync(Portfolio portfolio, Transaction existing, TransactionRequest request, CancellationToken ct)
@@ -59,26 +62,49 @@ public sealed class TransactionWriter(FolioDbContext db, MarketDataService marke
         existing.Note = built.Note;
         existing.UpdatedAt = clock.UtcNow;
 
-        var entries = await LoadEntriesAsync(portfolio.Id, ct);
-        entries.RemoveAll(e => e.Id == existing.Id);
-        entries.Add(existing.ToLedgerEntry());
-        if (Validate(portfolio, entries, existing.Id) is { } problem)
-            return WriteResult.Fail(problem);
+        return await LockedAsync(portfolio.Id, async () =>
+        {
+            var entries = await LoadEntriesAsync(portfolio.Id, ct);
+            entries.RemoveAll(e => e.Id == existing.Id);
+            entries.Add(existing.ToLedgerEntry());
+            if (Validate(portfolio, entries, existing.Id) is { } problem)
+                return WriteResult.Fail(problem);
 
-        await db.SaveChangesAsync(ct);
-        return new WriteResult([existing], null);
+            await db.SaveChangesAsync(ct);
+            return new WriteResult([existing], null);
+        }, ct);
     }
 
-    public async Task<string?> DeleteAsync(Portfolio portfolio, Transaction existing, CancellationToken ct)
-    {
-        var entries = await LoadEntriesAsync(portfolio.Id, ct);
-        entries.RemoveAll(e => e.Id == existing.Id);
-        if (Validate(portfolio, entries, null) is { } problem)
-            return problem;
+    public Task<string?> DeleteAsync(Portfolio portfolio, Transaction existing, CancellationToken ct) =>
+        LockedAsync(portfolio.Id, async () =>
+        {
+            var entries = await LoadEntriesAsync(portfolio.Id, ct);
+            entries.RemoveAll(e => e.Id == existing.Id);
+            if (Validate(portfolio, entries, null) is { } problem)
+                return problem;
 
-        db.Transactions.Remove(existing);
-        await db.SaveChangesAsync(ct);
-        return null;
+            db.Transactions.Remove(existing);
+            await db.SaveChangesAsync(ct);
+            return (string?)null;
+        }, ct);
+
+    /// <summary>
+    /// Runs a write while holding the portfolio's row lock, so two writes to one portfolio (two people on a shared
+    /// portfolio, or two tabs) replay and save one after the other: neither can take the same entry number or sell
+    /// shares the other just sold. A caller's own transaction (adding a property) already spans the write; the lock
+    /// then joins it and is released when the caller commits.
+    /// </summary>
+    private async Task<T> LockedAsync<T>(Guid portfolioId, Func<Task<T>> write, CancellationToken ct)
+    {
+        var own = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        await using (own)
+        {
+            await db.Database.ExecuteSqlAsync($"SELECT 1 FROM portfolios WHERE id = {portfolioId} FOR UPDATE", ct);
+            var result = await write();
+            if (own is not null)
+                await own.CommitAsync(ct);
+            return result;
+        }
     }
 
     private async Task<List<LedgerEntry>> LoadEntriesAsync(Guid portfolioId, CancellationToken ct) =>

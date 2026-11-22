@@ -113,9 +113,19 @@ public sealed class MarketDataService(
     /// <summary>Makes sure exchange rates for each currency reach back to <paramref name="from"/>.</summary>
     public async Task EnsureFxAsync(IEnumerable<string> currencies, DateOnly from, CancellationToken ct)
     {
-        foreach (var currency in currencies.Where(c => c != Currencies.Cad).Distinct())
+        var wanted = currencies.Where(c => c != Currencies.Cad).Distinct().ToList();
+        if (wanted.Count == 0)
+            return;
+
+        // One query for every currency's first stored date; this runs on each valuation, so it stays one round trip.
+        var firstDates = await db.FxRates
+            .Where(r => wanted.Contains(r.Currency))
+            .GroupBy(r => r.Currency)
+            .Select(g => new { Currency = g.Key, First = g.Min(r => r.Date) })
+            .ToDictionaryAsync(x => x.Currency, x => (DateOnly?)x.First, ct);
+        foreach (var currency in wanted)
         {
-            var earliest = await db.FxRates.Where(r => r.Currency == currency).MinAsync(r => (DateOnly?)r.Date, ct);
+            var earliest = firstDates.GetValueOrDefault(currency);
             if (earliest <= from)
                 continue;
 
@@ -147,9 +157,13 @@ public sealed class MarketDataService(
         return security;
     }
 
-    public async Task SetManualPriceAsync(Security security, DateOnly date, decimal close, CancellationToken ct)
+    public Task SetManualPriceAsync(Security security, DateOnly date, decimal close, CancellationToken ct) =>
+        SetManualPricesAsync(security, [new PricePoint(date, close)], ct);
+
+    /// <summary>Stores several hand-entered prices at once (an import restoring a property's valuations).</summary>
+    public async Task SetManualPricesAsync(Security security, IReadOnlyList<PricePoint> prices, CancellationToken ct)
     {
-        await UpsertBarsAsync(security.Id, [new PricePoint(date, close)], PriceSource.Manual, ct);
+        await UpsertBarsAsync(security.Id, prices, PriceSource.Manual, ct);
         security.LastRefreshAt = clock.UtcNow;
         await db.SaveChangesAsync(ct);
     }

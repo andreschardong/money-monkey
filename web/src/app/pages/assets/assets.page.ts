@@ -1,11 +1,12 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, linkedSignal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { RouterLink } from '@angular/router';
 import { Auth } from '../../core/auth';
 import { FORMAT_PIPES, sessionLabel } from '../../core/format';
 import { AssetHolding, Assets, IsoDate } from '../../core/models';
-import { DisplayCurrency, MarketStatusStore, PortfolioList } from '../../core/stores';
+import { DisplayCurrency, MarketStatusStore, PortfolioList, RealEstateFilter } from '../../core/stores';
 import { CurrencySwitch } from '../../molecules/currency-switch/currency-switch';
 import { Panel } from '../../molecules/panel/panel';
 import { StateMessage } from '../../molecules/state-message/state-message';
@@ -21,6 +22,7 @@ import { SortHeader, TableSort } from '../../atoms/table-sort/table-sort';
   imports: [
     RouterLink,
     MatButtonModule,
+    MatSlideToggle,
     Busy,
     Change,
     HeroFigure,
@@ -39,8 +41,12 @@ export class AssetsPage {
   protected readonly display = inject(DisplayCurrency);
   protected readonly auth = inject(Auth);
   private readonly marketStatus = inject(MarketStatusStore);
+  /** The overview's "Include real estate" switch; turning it off here turns it off there too. */
+  protected readonly realEstate = inject(RealEstateFilter);
 
-  private readonly resource = httpResource<Assets>(() => `/api/assets?currency=${this.display.value()}`);
+  private readonly resource = httpResource<Assets>(
+    () => `/api/assets?currency=${this.display.value()}${this.realEstate.include() ? '' : '&excludeRealEstate=true'}`,
+  );
 
   /** The last loaded value stays on screen while another currency loads. */
   private readonly reloadOnNewPrices = effect(() => {

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Folio.Api.Data;
 using Folio.Api.MarketData;
 using Folio.Api.Portfolios;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace Folio.Api.Endpoints;
 
-public static class MarketEndpoints
+public static partial class MarketEndpoints
 {
     public static void MapMarketEndpoints(this IEndpointRouteBuilder api)
     {
@@ -66,7 +67,8 @@ public static class MarketEndpoints
         var day = date is { } d && d <= clock.Today ? d : clock.Today;
         var currencies = new SortedSet<string>(Currencies.PortfolioCurrencies);
         currencies.UnionWith(await db.Securities.Select(s => s.Currency).Distinct().ToListAsync(ct));
-        currencies.UnionWith(await db.Transactions.Select(t => t.Currency).Distinct().ToListAsync(ct));
+        // Transactions have no query filter of their own, so they are narrowed to the portfolios this account can see.
+        currencies.UnionWith(await db.Transactions.Where(t => db.Portfolios.Any(p => p.Id == t.PortfolioId)).Select(t => t.Currency).Distinct().ToListAsync(ct));
         currencies.UnionWith(await db.CashBalances.Where(c => db.Portfolios.Any(p => p.Id == c.PortfolioId)).Select(c => c.Currency).Distinct().ToListAsync(ct));
 
         if (day < clock.Today.AddDays(-7))
@@ -92,15 +94,30 @@ public static class MarketEndpoints
         return new FxRatesDto(day, ratesDate, rates);
     }
 
-    /// <summary>The run log mentions every account's symbols; each account sees only its own lines.</summary>
+    /// <summary>
+    /// The run log mentions every account's symbols; each account sees only its own lines, and the updated and failed
+    /// counts are worked out from those lines too, so they don't reveal how many securities other accounts hold.
+    /// </summary>
     private static RefreshRunDto ToDto(RefreshRun r, HashSet<string> mySymbols)
     {
-        var log = r.Log is null ? null : string.Join('\n', r.Log.Split('\n').Where(line =>
+        if (r.Log is null)
+            return new RefreshRunDto(r.Id, r.StartedAt, r.FinishedAt, r.Trigger, r.Status, 0, 0, r.FxRatesStored, null);
+
+        var lines = r.Log.Split('\n').Select(line =>
         {
             var colon = line.IndexOf(':');
-            var head = colon < 0 ? line : line[..colon];
-            return head.Contains(' ') || mySymbols.Contains(head);
-        }));
-        return new RefreshRunDto(r.Id, r.StartedAt, r.FinishedAt, r.Trigger, r.Status, r.SecuritiesUpdated, r.SecuritiesFailed, r.FxRatesStored, log);
+            return colon < 0 ? (Line: line, Head: line, Message: string.Empty) : (Line: line, Head: line[..colon], Message: line[(colon + 1)..]);
+        }).ToList();
+        var outcomes = lines.Where(l => mySymbols.Contains(l.Head))
+            .GroupBy(l => l.Head, StringComparer.Ordinal)
+            .Select(g => g.Any(l => UpdatedLine().IsMatch(l.Message)))
+            .ToList();
+        var log = string.Join('\n', lines.Where(l => l.Head.Contains(' ') || mySymbols.Contains(l.Head)).Select(l => l.Line));
+        return new RefreshRunDto(r.Id, r.StartedAt, r.FinishedAt, r.Trigger, r.Status,
+            outcomes.Count(updated => updated), outcomes.Count(updated => !updated), r.FxRatesStored, log);
     }
+
+    /// <summary>What a symbol's log line says after its colon when its closes were stored (by Yahoo or the fallback).</summary>
+    [GeneratedRegex(@"^ (no new closes|\S+ on \d{4}-\d{2}-\d{2}( from Alpha Vantage)?)\.$", RegexOptions.CultureInvariant)]
+    private static partial Regex UpdatedLine();
 }

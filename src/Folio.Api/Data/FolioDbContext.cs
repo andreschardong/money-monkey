@@ -96,6 +96,8 @@ public sealed class FolioDbContext(DbContextOptions<FolioDbContext> options, ICu
         model.Entity<Transaction>(e =>
         {
             e.HasIndex(t => new { t.PortfolioId, t.Date });
+            // Entry numbers order same-day transactions, so the database refuses two with the same number in a portfolio.
+            e.HasIndex(t => new { t.PortfolioId, t.Sequence }).IsUnique();
             e.HasIndex(t => t.SecurityId);
             e.Property(t => t.Currency).HasMaxLength(3);
             e.Property(t => t.Note).HasMaxLength(500);

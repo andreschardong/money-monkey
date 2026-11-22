@@ -13,18 +13,17 @@ public static class AssetEndpoints
     public static void MapAssetEndpoints(this IEndpointRouteBuilder api) =>
         api.MapGet("/assets", Get).WithTags("Overview");
 
+    /// <param name="excludeRealEstate">Leave real-estate portfolios out, as the overview's switch does.</param>
     private static async Task<Results<Ok<AssetsDto>, ProblemHttpResult>> Get(
-        string? currency, FolioDbContext db, PortfolioCalculator calculator, CancellationToken ct)
+        string? currency, bool? excludeRealEstate, FolioDbContext db, PortfolioCalculator calculator, CancellationToken ct)
     {
         var display = Currencies.Normalize(currency ?? Currencies.Cad);
         if (!Currencies.IsPortfolioCurrency(display))
             return Problems.BadRequest("The display currency must be CAD, USD or EUR.");
 
         var today = calculator.Today;
-        var portfolios = await db.Portfolios.AsNoTracking().OrderBy(p => p.CreatedAt).ToListAsync(ct);
-        var snapshots = new List<PortfolioSnapshot>();
-        foreach (var portfolio in portfolios)
-            snapshots.Add(await calculator.SnapshotAsync(portfolio, ct));
+        var portfolios = await db.Portfolios.IncludedAsync(excludeRealEstate, ct);
+        var snapshots = await calculator.SnapshotsAsync(portfolios, ct);
 
         await calculator.EnsureRatesAsync(portfolios.Select(p => p.BaseCurrency).Append(display), today, ct);
         var fx = await calculator.LoadFxAsync(today, today, ct);

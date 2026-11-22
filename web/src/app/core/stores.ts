@@ -105,7 +105,10 @@ function readDisplayCurrency(): Currency {
 
 const REAL_ESTATE_KEY = 'folio.includeRealEstate';
 
-/** Whether the overview counts real-estate portfolios. A way of looking, like the display currency, so it stays in this browser. */
+/**
+ * Whether the overview and All assets count real-estate portfolios (one switch for both pages). A way of looking, like
+ * the display currency, so it stays in this browser.
+ */
 @Injectable({ providedIn: 'root' })
 export class RealEstateFilter {
   readonly include = signal(readIncludeRealEstate());

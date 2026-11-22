@@ -14,7 +14,12 @@
   </app-state-message>
 } @else if (assets(); as a) {
   <header class="hero" [class.refreshing]="loading()">
-    <h1 class="title">All assets</h1>
+    <h1 class="title">
+      All assets
+      @if (!realEstate.include()) {
+        <span class="muted"> without real estate</span>
+      }
+    </h1>
     <p class="lede">
       Everything you hold across {{ a.portfolioCount }} {{ a.portfolioCount === 1 ? 'portfolio' : 'portfolios' }}, in
       {{ a.currency }}.
@@ -22,6 +27,9 @@
     <div class="figure-row">
       <app-hero-figure [value]="a.totalValue" [currency]="a.currency" />
       <app-currency-switch [value]="display.value()" (valueChange)="display.set($event)" />
+      <mat-slide-toggle class="real-estate" [checked]="realEstate.include()" (change)="realEstate.set($event.checked)">
+        Include real estate
+      </mat-slide-toggle>
     </div>
     <dl class="facts">
       <div>

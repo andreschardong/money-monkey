@@ -26,10 +26,8 @@ public static class OverviewEndpoints
             return Problems.BadRequest("The display currency must be CAD, USD or EUR.");
 
         var today = calculator.Today;
-        var all = await Included(db, excludeRealEstate, ct);
-        var snapshots = new List<PortfolioSnapshot>();
-        foreach (var portfolio in all)
-            snapshots.Add(await calculator.SnapshotAsync(portfolio, ct));
+        var all = await db.Portfolios.IncludedAsync(excludeRealEstate, ct);
+        var snapshots = await calculator.SnapshotsAsync(all, ct);
 
         // Deposits are converted at their own dates (as in the chart), so a USD account viewed in CAD shows its
         // currency gain as return rather than hiding it inside the deposits.
@@ -131,19 +129,12 @@ public static class OverviewEndpoints
         if (!Currencies.IsPortfolioCurrency(display))
             return Problems.BadRequest("The display currency must be CAD, USD or EUR.");
 
-        var inputs = new List<(string, List<Transaction>, CashLedger)>();
-        foreach (var portfolio in await Included(db, excludeRealEstate, ct))
-            inputs.Add((portfolio.BaseCurrency, await calculator.LoadTransactionsAsync(portfolio.Id, ct), await calculator.LoadCashAsync(portfolio.Id, ct)));
+        var portfolios = await db.Portfolios.IncludedAsync(excludeRealEstate, ct);
+        var ids = portfolios.Select(p => p.Id).ToList();
+        var transactions = await calculator.LoadTransactionsAsync(ids, ct);
+        var cash = await calculator.LoadCashAsync(ids, ct);
+        var inputs = portfolios.Select(p => (p.BaseCurrency, transactions[p.Id].ToList(), cash[p.Id])).ToList();
         return TypedResults.Ok(await HistoryQuery.BuildAsync(inputs, display, range, calculator, ct));
-    }
-
-    /// <summary>The portfolios the overview counts, in creation order; real estate only when asked for.</summary>
-    private static async Task<List<Portfolio>> Included(FolioDbContext db, bool? excludeRealEstate, CancellationToken ct)
-    {
-        var portfolios = db.Portfolios.AsNoTracking();
-        if (excludeRealEstate == true)
-            portfolios = portfolios.Where(p => p.Kind != PortfolioKind.RealEstate);
-        return await portfolios.OrderBy(p => p.CreatedAt).ToListAsync(ct);
     }
 
     private static void Add(Dictionary<string, decimal> slices, string key, decimal value) =>
