@@ -228,8 +228,18 @@ public sealed record ExportPortfolioDto(
     string? Country = null,
     PortfolioKind Kind = PortfolioKind.Investment);
 
+/// <summary>
+/// A manually priced security the transactions refer to (a property, a GIC, a private fund), with every price typed
+/// for it. Without these a restore would carry each one at cost and lose its kind.
+/// </summary>
+public sealed record ExportSecurityDto(string Symbol, string Name, string Currency, AssetType AssetType, IReadOnlyList<PricePointDto> Prices);
+
 /// <summary>Everything the account entered; what a restore or another tool would need.</summary>
-public sealed record ExportDto(DateTimeOffset ExportedAt, IReadOnlyList<ExportPortfolioDto> Portfolios);
+/// <param name="ManualSecurities">Absent from files exported before 1.4.2; those restore manual securities as before.</param>
+public sealed record ExportDto(
+    DateTimeOffset ExportedAt,
+    IReadOnlyList<ExportPortfolioDto> Portfolios,
+    IReadOnlyList<ExportSecurityDto>? ManualSecurities = null);
 
 public sealed record ImportResultDto(int Portfolios, int Transactions, int CashBalances, IReadOnlyList<string> Warnings);
 

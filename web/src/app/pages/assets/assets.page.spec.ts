@@ -87,7 +87,7 @@ describe('AssetsPage', () => {
     await settle();
     await flush('GET', URL_CAD, assets());
 
-    expect(el.querySelector('h1')?.textContent).toBe('All assets');
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe('All assets');
   });
 
   it('summarises the totals, one portfolio singular and several plural', async () => {
@@ -262,6 +262,17 @@ describe('AssetsPage', () => {
     expect(text(el)).toContain('in EUR');
   });
 
+  it('leaves real estate out of the request when the switch is turned off, says so, and remembers it', async () => {
+    const { el } = await create();
+    expect(el.querySelector('h1')?.textContent).not.toContain('without real estate');
+    (el.querySelector('mat-slide-toggle button') as HTMLElement).click();
+    await settle();
+
+    await flush('GET', `${URL_CAD}&excludeRealEstate=true`, assets());
+    expect(el.querySelector('h1')?.textContent).toContain('without real estate');
+    expect(localStorage.getItem('folio.includeRealEstate')).toBe('no');
+  });
+
   it('reloads when a price refresh finishes and keeps the page if that reload fails', async () => {
     const { el } = await create();
     market.pricesVersion.set(1);
@@ -269,7 +280,7 @@ describe('AssetsPage', () => {
     flushNetworkError(expectRequest('GET', URL_CAD));
     await settle();
 
-    expect(el.querySelector('h1')?.textContent).toBe('All assets');
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe('All assets');
     expect(text(el)).not.toContain('did not load');
   });
 });

@@ -13,6 +13,7 @@ public static class ImportEndpoints
 {
     private const int MaxTransactions = 20_000;
     private const int MaxSymbols = 500;
+    private const int MaxManualPrices = 100_000;
 
     public static void MapImportEndpoints(this IEndpointRouteBuilder api) =>
         api.MapPost("/import", Import).WithTags("Export");
@@ -31,6 +32,16 @@ public static class ImportEndpoints
         if (symbolCount > MaxSymbols)
             return Problems.BadRequest($"The file has more than {MaxSymbols} different symbols; split it up.");
 
+        var savedManual = (export.ManualSecurities ?? []).Select(s => s with { Prices = s.Prices ?? [] }).ToList();
+        if (savedManual.Count > MaxSymbols || savedManual.Sum(s => s.Prices.Count) > MaxManualPrices)
+            return Problems.BadRequest($"The file has more than {MaxSymbols} manual securities or {MaxManualPrices:N0} hand-entered prices; split it up.");
+        if (savedManual.FirstOrDefault(s => string.IsNullOrWhiteSpace(s.Symbol) || s.Prices.Any(p => p.Close <= 0)) is { } bad)
+            return Problems.BadRequest($"The manual security \"{bad.Symbol}\" needs a symbol and prices greater than zero.");
+        var manualBySymbol = savedManual.DistinctBy(s => MarketDataService.NormalizeSymbol(s.Symbol))
+            .ToDictionary(s => MarketDataService.NormalizeSymbol(s.Symbol), StringComparer.OrdinalIgnoreCase);
+
+        // All or nothing: a file refused halfway through must not leave securities or prices behind.
+        await using var scope = await db.Database.BeginTransactionAsync(ct);
         var existingNames = (await db.Portfolios.Select(p => p.Name).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var warnings = new List<string>();
         var securities = new Dictionary<string, Security>(StringComparer.OrdinalIgnoreCase);
@@ -79,7 +90,7 @@ public static class ImportEndpoints
                 {
                     if (string.IsNullOrWhiteSpace(t.Symbol))
                         return Problems.BadRequest($"\"{name}\": the {t.Type} on {t.Date:yyyy-MM-dd} has no symbol.");
-                    security = await ResolveAsync(t, currency, securities, db, market, me, warnings, ct);
+                    security = await ResolveAsync(t, currency, securities, manualBySymbol, db, market, me, warnings, ct);
                 }
 
                 portfolio.Transactions.Add(new Transaction
@@ -128,13 +139,17 @@ public static class ImportEndpoints
         }
 
         await db.SaveChangesAsync(ct);
+        await scope.CommitAsync(ct);
         return TypedResults.Ok(new ImportResultDto(created.Count, transactions, cashEntries, warnings));
     }
 
-    /// <summary>A quoted symbol is looked up (and shared); anything that can't be quoted becomes a manually priced security.</summary>
+    /// <summary>
+    /// A quoted symbol is looked up (and shared); anything that can't be quoted becomes a manually priced security, with
+    /// the asset type and prices the file saved for it.
+    /// </summary>
     private static async Task<Security> ResolveAsync(
-        ExportTransactionDto t, string currency, Dictionary<string, Security> cache, FolioDbContext db, MarketDataService market,
-        ICurrentUser me, List<string> warnings, CancellationToken ct)
+        ExportTransactionDto t, string currency, Dictionary<string, Security> cache, Dictionary<string, ExportSecurityDto> saved,
+        FolioDbContext db, MarketDataService market, ICurrentUser me, List<string> warnings, CancellationToken ct)
     {
         var symbol = MarketDataService.NormalizeSymbol(t.Symbol!);
         if (cache.TryGetValue(symbol, out var cached))
@@ -157,8 +172,21 @@ public static class ImportEndpoints
             }
         }
 
-        security ??= await market.CreateManualAsync(symbol, string.IsNullOrWhiteSpace(t.SecurityName) ? symbol : t.SecurityName!,
-            currency, AssetType.Other, ct);
+        if (security is null)
+        {
+            var name = string.IsNullOrWhiteSpace(t.SecurityName) ? symbol : t.SecurityName!;
+            if (saved.TryGetValue(symbol, out var restored))
+            {
+                var assetType = Enum.IsDefined(restored.AssetType) ? restored.AssetType : AssetType.Other;
+                security = await market.CreateManualAsync(symbol, name, currency, assetType, ct);
+                await market.SetManualPricesAsync(security, restored.Prices.Select(p => new PricePoint(p.Date, p.Close)).ToList(), ct);
+            }
+            else
+            {
+                security = await market.CreateManualAsync(symbol, name, currency, AssetType.Other, ct);
+            }
+        }
+
         cache[symbol] = security;
         return security;
     }

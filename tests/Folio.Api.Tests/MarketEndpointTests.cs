@@ -62,20 +62,24 @@ public class MarketEndpointTests(FolioApiFactory factory)
     }
 
     [Fact]
-    public async Task WhenARunLogMentionsOtherAccountsSymbols_ShouldShowOnlyMyLinesAndTheGeneralOnes()
+    public async Task WhenARunLogMentionsOtherAccountsSymbols_ShouldShowOnlyMyLinesAndCountOnlyMySecurities()
     {
         var (mine, _) = await factory.NewAccountAsync();
         var (other, _) = await factory.NewAccountAsync();
         var portfolio = await mine.CreatePortfolioAsync("Log");
         await mine.BuyAsync(portfolio, "AAPL", 1, 1m);
+        await mine.BuyAsync(portfolio, "SHOP.TO", 1, 1m);
+        await mine.BuyAsync(portfolio, "HOLI.TO", 1, 1m);
         var started = new DateTimeOffset(2040, 1, 1, 12, 0, 0, TimeSpan.Zero);
         var runId = await factory.WithDbAsync(async db =>
         {
+            // AAPL updated; SHOP.TO failed at Yahoo and then came from the fallback; HOLI.TO failed; ZZZZ is someone else's.
             var run = new RefreshRun
             {
                 StartedAt = started, FinishedAt = started.AddMinutes(1), Trigger = "Manual", Status = RefreshStatus.PartiallySucceeded,
-                SecuritiesUpdated = 3, SecuritiesFailed = 1, FxRatesStored = 7,
-                Log = "AAPL: 202 on 2026-10-09.\nMSFT: 1 on 2026-10-09.\nExchange rates: 7 stored (EUR, USD).\nRefresh failed: boom\nnoise\nAAPL",
+                SecuritiesUpdated = 30, SecuritiesFailed = 10, FxRatesStored = 7,
+                Log = "AAPL: 202 on 2026-10-09.\nZZZZ: 1 on 2026-10-09.\nExchange rates: 7 stored (EUR, USD).\nRefresh failed: boom\nnoise\nAAPL\n"
+                    + "SHOP.TO: Too many requests\nSHOP.TO: 99.5 on 2026-10-09 from Alpha Vantage.\nHOLI.TO: Not found",
             };
             db.RefreshRuns.Add(run);
             db.RefreshRuns.Add(new RefreshRun { StartedAt = started.AddHours(-1), Trigger = "Seed", Status = RefreshStatus.Succeeded });
@@ -87,10 +91,14 @@ public class MarketEndpointTests(FolioApiFactory factory)
         var otherRuns = await other.GetJsonAsync<List<RefreshRunDto>>("/api/market/runs?take=100");
 
         var seen = mineRuns.Single(r => r.Id == runId);
-        (seen.Trigger, seen.Status, seen.SecuritiesUpdated, seen.SecuritiesFailed, seen.FxRatesStored).ShouldBe(("Manual", RefreshStatus.PartiallySucceeded, 3, 1, 7));
-        seen.Log.ShouldBe("AAPL: 202 on 2026-10-09.\nExchange rates: 7 stored (EUR, USD).\nRefresh failed: boom\nAAPL");
-        otherRuns.Single(r => r.Id == runId).Log.ShouldBe("Exchange rates: 7 stored (EUR, USD).\nRefresh failed: boom");
-        mineRuns.Single(r => r.Id == runId + 1).Log.ShouldBeNull();
+        (seen.Trigger, seen.Status, seen.SecuritiesUpdated, seen.SecuritiesFailed, seen.FxRatesStored).ShouldBe(("Manual", RefreshStatus.PartiallySucceeded, 2, 1, 7));
+        seen.Log.ShouldBe("AAPL: 202 on 2026-10-09.\nExchange rates: 7 stored (EUR, USD).\nRefresh failed: boom\nAAPL\n"
+            + "SHOP.TO: Too many requests\nSHOP.TO: 99.5 on 2026-10-09 from Alpha Vantage.\nHOLI.TO: Not found");
+        var theirs = otherRuns.Single(r => r.Id == runId);
+        theirs.Log.ShouldBe("Exchange rates: 7 stored (EUR, USD).\nRefresh failed: boom");
+        (theirs.SecuritiesUpdated, theirs.SecuritiesFailed).ShouldBe((0, 0));
+        var unfinished = mineRuns.Single(r => r.Id == runId + 1);
+        (unfinished.Log, unfinished.SecuritiesUpdated, unfinished.SecuritiesFailed).ShouldBe((null, 0, 0));
 
         var status = await mine.GetJsonAsync<MarketStatusDto>("/api/market/status");
         status.LastRun!.Id.ShouldBe(runId);
@@ -173,6 +181,28 @@ public class MarketEndpointTests(FolioApiFactory factory)
         rates.Date.ShouldBe(Today);
         rates.RatesDate.ShouldBe(Today);
         rates.Rates.Select(r => (r.From, r.To, r.Rate)).ShouldBe([("CAD", "CAD", 1m), ("EUR", "CAD", 1.5m), ("USD", "CAD", 1.4m)]);
+    }
+
+    [Fact]
+    public async Task WhenAnotherAccountTradesInACurrency_ShouldNotListItInMyRates()
+    {
+        var (mine, _) = await factory.NewAccountAsync();
+        var (other, _) = await factory.NewAccountAsync();
+        await factory.WithDbAsync(async db =>
+        {
+            if (!await db.FxRates.AnyAsync(r => r.Currency == "ZAR" && r.Date == Today, Ct))
+                db.FxRates.Add(new FxRate { Currency = "ZAR", Date = Today, CadPerUnit = 0.075m, Source = "Seed" });
+            await db.SaveChangesAsync(Ct);
+        });
+        var portfolio = await other.CreatePortfolioAsync("Rand");
+        // A deposit has no security, so the currency is known only from the transaction itself.
+        await other.AddAsync(portfolio, new TransactionRequest(TransactionType.Deposit, new DateOnly(2026, 2, 2), Currency: "ZAR", Amount: 10m, FxRate: 0.075m));
+
+        var theirs = await other.GetJsonAsync<FxRatesDto>("/api/fx");
+        var mineRates = await mine.GetJsonAsync<FxRatesDto>("/api/fx");
+
+        theirs.Rates.ShouldContain(r => r.From == "ZAR");
+        mineRates.Rates.ShouldNotContain(r => r.From == "ZAR");
     }
 
     [Fact]

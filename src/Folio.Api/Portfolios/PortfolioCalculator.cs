@@ -38,34 +38,64 @@ public sealed class PortfolioCalculator(FolioDbContext db, MarketDataService mar
         return _session;
     }
 
-    public async Task<PortfolioSnapshot> SnapshotAsync(Portfolio portfolio, CancellationToken ct)
+    public async Task<PortfolioSnapshot> SnapshotAsync(Portfolio portfolio, CancellationToken ct) =>
+        (await SnapshotsAsync([portfolio], ct))[0];
+
+    /// <summary>
+    /// Values several portfolios with the same handful of queries however many there are: transactions, cash, prices,
+    /// rates and shares are each read once for all of them, not once per portfolio. Results keep the order given.
+    /// </summary>
+    public async Task<IReadOnlyList<PortfolioSnapshot>> SnapshotsAsync(IReadOnlyList<Portfolio> portfolios, CancellationToken ct)
     {
-        var transactions = await LoadTransactionsAsync(portfolio.Id, ct);
-        var ledger = PortfolioLedger.Replay(portfolio.BaseCurrency, transactions.Select(t => t.ToLedgerEntry()));
-        var cash = await LoadCashAsync(portfolio.Id, ct);
+        if (portfolios.Count == 0)
+            return [];
+
+        var ids = portfolios.Select(p => p.Id).ToList();
+        var transactions = await LoadTransactionsAsync(ids, ct);
+        var cash = await LoadCashAsync(ids, ct);
+        var ledgers = portfolios.ToDictionary(
+            p => p.Id,
+            p => PortfolioLedger.Replay(p.BaseCurrency, transactions[p.Id].Select(t => t.ToLedgerEntry())));
+        var currencies = portfolios.ToDictionary(
+            p => p.Id,
+            p => ledgers[p.Id].OpenPositions.Select(o => o.Currency).Concat(cash[p.Id].Currencies).Distinct().ToList());
+
         var today = clock.Today;
-        var prices = await LoadLatestPricesAsync(ledger.OpenPositions.Select(p => p.SecurityId).ToList(), today, ct);
-        var currencies = ledger.OpenPositions.Select(p => p.Currency).Concat(cash.Currencies).Distinct().ToList();
-        await EnsureRatesAsync(currencies.Append(portfolio.BaseCurrency), today, ct);
+        var securityIds = ledgers.Values.SelectMany(l => l.OpenPositions).Select(o => o.SecurityId).Distinct().ToList();
+        var prices = await LoadLatestPricesAsync(securityIds, today, ct);
+        await EnsureRatesAsync(currencies.Values.SelectMany(c => c).Concat(portfolios.Select(p => p.BaseCurrency)), today, ct);
         var fx = await LoadFxAsync(today, today, ct);
-        var valuation = PortfolioValuator.Value(ledger, today, prices, fx, cash, await SessionAsync(ct));
-        var securities = transactions
-            .Where(t => t.Security is not null)
-            .Select(t => t.Security!)
-            .DistinctBy(s => s.Id)
-            .ToDictionary(s => s.Id);
-        var missing = currencies.Where(c => fx.GetRate(c, portfolio.BaseCurrency, today) is null).ToList();
-        return new PortfolioSnapshot(portfolio, transactions, ledger, cash, valuation, securities, missing, await access.DescribeAsync(portfolio, ct));
+        var session = await SessionAsync(ct);
+        var accessInfo = await access.DescribeAsync(portfolios, ct);
+
+        return portfolios.Select(portfolio =>
+        {
+            var list = transactions[portfolio.Id].ToList();
+            var ledger = ledgers[portfolio.Id];
+            var balances = cash[portfolio.Id];
+            var valuation = PortfolioValuator.Value(ledger, today, prices, fx, balances, session);
+            var securities = list
+                .Where(t => t.Security is not null)
+                .Select(t => t.Security!)
+                .DistinctBy(s => s.Id)
+                .ToDictionary(s => s.Id);
+            var missing = currencies[portfolio.Id].Where(c => fx.GetRate(c, portfolio.BaseCurrency, today) is null).ToList();
+            return new PortfolioSnapshot(portfolio, list, ledger, balances, valuation, securities, missing, accessInfo[portfolio.Id]);
+        }).ToList();
     }
 
     /// <summary>Every cash balance entered for the portfolio, by currency and date.</summary>
-    public async Task<CashLedger> LoadCashAsync(Guid portfolioId, CancellationToken ct)
+    public async Task<CashLedger> LoadCashAsync(Guid portfolioId, CancellationToken ct) =>
+        (await LoadCashAsync([portfolioId], ct))[portfolioId];
+
+    /// <summary>Every cash balance entered for each portfolio, in one query; a portfolio with none gets an empty ledger.</summary>
+    public async Task<IReadOnlyDictionary<Guid, CashLedger>> LoadCashAsync(IReadOnlyCollection<Guid> portfolioIds, CancellationToken ct)
     {
-        var cash = new CashLedger();
-        var rows = await db.CashBalances.AsNoTracking().Where(c => c.PortfolioId == portfolioId).ToListAsync(ct);
+        var ledgers = portfolioIds.Distinct().ToDictionary(id => id, _ => new CashLedger());
+        var rows = await db.CashBalances.AsNoTracking().Where(c => portfolioIds.Contains(c.PortfolioId)).ToListAsync(ct);
         foreach (var row in rows)
-            cash.Set(row.Currency, row.Date, row.Balance);
-        return cash;
+            ledgers[row.PortfolioId].Set(row.Currency, row.Date, row.Balance);
+        return ledgers;
     }
 
     /// <summary>
@@ -85,12 +115,17 @@ public sealed class PortfolioCalculator(FolioDbContext db, MarketDataService mar
     }
 
     public async Task<List<Transaction>> LoadTransactionsAsync(Guid portfolioId, CancellationToken ct) =>
-        await db.Transactions.AsNoTracking()
+        (await LoadTransactionsAsync([portfolioId], ct))[portfolioId].ToList();
+
+    /// <summary>Each portfolio's transactions in ledger order (date, then entry order), read in one query.</summary>
+    public async Task<ILookup<Guid, Transaction>> LoadTransactionsAsync(IReadOnlyCollection<Guid> portfolioIds, CancellationToken ct) =>
+        (await db.Transactions.AsNoTracking()
             .Include(t => t.Security)
-            .Where(t => t.PortfolioId == portfolioId)
+            .Where(t => portfolioIds.Contains(t.PortfolioId))
             .OrderBy(t => t.Date)
             .ThenBy(t => t.Sequence)
-            .ToListAsync(ct);
+            .ToListAsync(ct))
+        .ToLookup(t => t.PortfolioId);
 
     /// <summary>Recent closes for each security, enough for its value and day change on <paramref name="asOf"/>.</summary>
     public async Task<PriceTable> LoadLatestPricesAsync(IReadOnlyCollection<Guid> securityIds, DateOnly asOf, CancellationToken ct)
@@ -107,18 +142,20 @@ public sealed class PortfolioCalculator(FolioDbContext db, MarketDataService mar
         foreach (var bar in recent)
             table.Add(bar.SecurityId, bar.Date, bar.Close);
 
-        // Manually priced or stale securities: fall back to their last two closes, however old.
+        // Manually priced or stale securities: fall back to their last two closes, however old, in one query for all.
         var covered = recent.Select(b => b.SecurityId).ToHashSet();
-        foreach (var id in securityIds.Where(id => !covered.Contains(id)))
-        {
-            var older = await db.PriceBars.AsNoTracking()
-                .Where(b => b.SecurityId == id && b.Date <= asOf)
-                .OrderByDescending(b => b.Date)
-                .Take(2)
-                .ToListAsync(ct);
-            foreach (var bar in older)
-                table.Add(bar.SecurityId, bar.Date, bar.Close);
-        }
+        var stale = securityIds.Where(id => !covered.Contains(id)).ToList();
+        if (stale.Count == 0)
+            return table;
+
+        // "Fewer than two newer closes" is each security's last two; the (security, date) key answers the count.
+        var older = await db.PriceBars.AsNoTracking()
+            .Where(b => stale.Contains(b.SecurityId) && b.Date <= asOf
+                && db.PriceBars.Count(n => n.SecurityId == b.SecurityId && n.Date > b.Date && n.Date <= asOf) < 2)
+            .Select(b => new { b.SecurityId, b.Date, b.Close })
+            .ToListAsync(ct);
+        foreach (var bar in older)
+            table.Add(bar.SecurityId, bar.Date, bar.Close);
 
         return table;
     }

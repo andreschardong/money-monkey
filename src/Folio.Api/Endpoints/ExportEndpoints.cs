@@ -31,13 +31,22 @@ public static class ExportEndpoints
         var cash = await db.CashBalances.AsNoTracking()
             .Where(c => ids.Contains(c.PortfolioId)).OrderBy(c => c.Currency).ThenBy(c => c.Date).ToListAsync(ct);
 
+        // Prices typed by hand exist nowhere else, so they travel with the file; quoted prices are downloaded again.
+        var manual = transactions.Select(t => t.Security).OfType<Security>()
+            .Where(s => s.PriceSource == PriceSource.Manual).DistinctBy(s => s.Id).OrderBy(s => s.Symbol).ToList();
+        var manualIds = manual.Select(s => s.Id).ToList();
+        var prices = (await db.PriceBars.AsNoTracking().Where(b => manualIds.Contains(b.SecurityId)).OrderBy(b => b.Date).ToListAsync(ct))
+            .ToLookup(b => b.SecurityId);
+        var securities = manual.Select(s => new ExportSecurityDto(s.Symbol, s.Name, s.Currency, s.AssetType,
+            prices[s.Id].Select(b => new PricePointDto(b.Date, b.Close)).ToList())).ToList();
+
         var export = new ExportDto(time.GetUtcNow(), portfolios.Select(p => new ExportPortfolioDto(
             p.Id, p.Name, p.BaseCurrency, p.Description, p.CreatedAt,
             transactions.Where(t => t.PortfolioId == p.Id).Select(t => new ExportTransactionDto(
                 t.Date, t.Type, t.Security?.Symbol, t.Security?.Name, t.Security?.PriceSource.ToString(), t.Currency, t.Quantity, t.Price, t.Amount, t.Fee,
                 t.FxRate, t.SplitFrom, t.SplitTo, t.Note)).ToList(),
             cash.Where(c => c.PortfolioId == p.Id).Select(c => new CashEntryDto(c.Currency, c.Date, c.Balance, c.Note)).ToList(),
-            p.Country, p.Kind)).ToList());
+            p.Country, p.Kind)).ToList(), securities);
         return TypedResults.Ok(export);
     }
 
@@ -85,9 +94,10 @@ public static class ExportEndpoints
         var csv = new CsvBuilder("Portfolio", "Portfolio currency", "Symbol", "Security", "Currency", "Shares", "Average cost",
             "Book value (portfolio currency)", "Price", "Price date", "Market value", "Market value (portfolio currency)",
             "Unrealized gain (portfolio currency)");
-        foreach (var portfolio in await db.Portfolios.AsNoTracking().Where(p => p.OwnerId == me.Id).OrderBy(p => p.CreatedAt).ToListAsync(ct))
+        var portfolios = await db.Portfolios.AsNoTracking().Where(p => p.OwnerId == me.Id).OrderBy(p => p.CreatedAt).ToListAsync(ct);
+        foreach (var snapshot in await calculator.SnapshotsAsync(portfolios, ct))
         {
-            var snapshot = await calculator.SnapshotAsync(portfolio, ct);
+            var portfolio = snapshot.Portfolio;
             foreach (var h in snapshot.Valuation.Holdings.OrderByDescending(h => h.MarketValueBase))
             {
                 var security = snapshot.Securities[h.Position.SecurityId];

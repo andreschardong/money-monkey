@@ -95,6 +95,27 @@ public class OverviewAndAssetsTests(FolioApiFactory factory)
     }
 
     [Fact]
+    public async Task WhenRealEstateIsExcludedFromAllAssets_ShouldLeaveOutItsHoldingsAndCash()
+    {
+        var (client, _) = await factory.NewAccountAsync();
+        var investing = await client.CreatePortfolioAsync("Investing");
+        var homes = await client.CreatePortfolioAsync("Homes", kind: PortfolioKind.RealEstate);
+        var stock = await factory.SeedSecurityAsync();
+        var house = await factory.SeedSecurityAsync(assetType: AssetType.RealEstate);
+        await HoldAsync(client, investing, stock, 2, 50m);
+        await HoldAsync(client, homes, house, 1, 900m);
+        (await client.PutJsonAsync($"/api/portfolios/{homes}/cash", new SetCashRequest("CAD", 40m, null, null))).EnsureSuccessStatusCode();
+
+        var all = await client.GetJsonAsync<AssetsDto>("/api/assets");
+        var liquid = await client.GetJsonAsync<AssetsDto>("/api/assets?excludeRealEstate=true");
+
+        (all.PortfolioCount, all.TotalValue).ShouldBe((2, 100m + 900m + 40m));
+        (liquid.PortfolioCount, liquid.TotalValue, liquid.CashValue).ShouldBe((1, 100m, 0m));
+        liquid.Holdings.ShouldHaveSingleItem().SecurityId.ShouldBe(stock.Id);
+        liquid.Cash.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task WhenPortfoliosHaveDifferentPriceDates_ShouldReportTheNewestAndSkipPortfoliosWithoutPrices()
     {
         var (client, _) = await factory.NewAccountAsync();

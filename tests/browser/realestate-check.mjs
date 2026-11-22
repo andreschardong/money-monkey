@@ -139,6 +139,37 @@ await page.locator('.header').screenshot({ path: 'shots/realestate-holding-heade
 
 const exported = await json(await api.get(`${base}/api/export`));
 report(exported.portfolios.some(p => p.name === 'Apartment' && p.kind === 'RealEstate'), 'the export carries the kind');
+const savedProperty = exported.manualSecurities?.find(s => s.symbol === 'APT-SP');
+report(savedProperty?.assetType === 'RealEstate' && savedProperty.prices.some(p => p.close === 520000) && savedProperty.prices.some(p => p.close === 420000),
+  `the export carries the property's kind and every value typed for it (${savedProperty?.assetType}, ${JSON.stringify(savedProperty?.prices.map(p => p.close))})`);
+
+// ------------------------------------------------------------------ All assets has the same switch
+await page.goto(`${base}/assets`);
+await page.getByRole('heading', { name: 'All assets' }).waitFor();
+const assetsToggle = page.getByRole('switch', { name: 'Include real estate' });
+await assetsToggle.waitFor();
+report((await assetsToggle.getAttribute('aria-checked')) === 'true', 'All assets: the real-estate switch is there, and on as on the overview');
+const propertyLine = page.locator('table.data tbody tr', { hasText: 'APT-SP' }).first();
+await propertyLine.waitFor({ timeout: 15000 });
+const allAssets = await json(await api.get(`${base}/api/assets?currency=CAD`));
+const liquidAssets = await json(await api.get(`${base}/api/assets?currency=CAD&excludeRealEstate=true`));
+report(Math.abs(allAssets.totalValue - liquidAssets.totalValue - 520000) < 1 && !liquidAssets.holdings.some(h => h.symbol === 'APT-SP'),
+  `API: All assets without real estate is $520,000 lower and has no property line (${allAssets.totalValue} vs ${liquidAssets.totalValue})`);
+await assetsToggle.click();
+await propertyLine.waitFor({ state: 'hidden', timeout: 15000 });
+report(Math.abs((await heroValue()) - liquidAssets.totalValue) < 1, `All assets: the total drops to the liquid figure (${await heroValue()})`);
+report(await page.getByText('without real estate').isVisible(), 'All assets: the title says "without real estate"');
+await page.locator('.hero').screenshot({ path: 'shots/realestate-assets-hero.png' });
+await page.setViewportSize({ width: 390, height: 844 });
+await assetsToggle.waitFor();
+const assetsOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+report(assetsOverflow <= 0, `phone: All assets with the switch does not scroll sideways (${assetsOverflow}px)`);
+await page.locator('.hero').screenshot({ path: 'shots/realestate-assets-hero-phone.png' });
+await page.setViewportSize({ width: 1440, height: 900 });
+await page.goto(`${base}/`);
+await toggle.waitFor();
+report((await toggle.getAttribute('aria-checked')) === 'false', 'overview: the switch follows the choice made on All assets');
+await toggle.click();
 
 await context.close();
 await browser.close();

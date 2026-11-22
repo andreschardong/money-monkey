@@ -62,8 +62,8 @@ The screenshots show demo data; `tests/browser/readme-shots.mjs` regenerates the
 - **A country per portfolio.** Each portfolio can say where the account is held; the overview then sums your money
   by country, next to the splits by currency and by type.
 - **Real estate on the side.** A portfolio can be marked as real estate: a property you own, valued through a manually
-  priced holding. The overview counts it by default and has a switch to leave it out, so net worth reads with or
-  without property; By type shows it as its own slice.
+  priced holding. The overview and All assets count it by default and share a switch to leave it out, so net worth
+  reads with or without property; By type shows it as its own slice.
 
 ## Run it
 
@@ -117,8 +117,11 @@ The Account page has **Export my data**: transactions, cash balances and today's
 spreadsheet, and **Everything (JSON)**, the complete record. **Import** loads such a JSON file into the signed-in
 account: each portfolio in the file becomes a new portfolio (a name already in use gets "(imported)" added), with
 its transactions and cash entries; nothing already there is changed. Quoted stocks are looked up again; a symbol
-that cannot be quoted is kept as a manually priced security and reported after the import. The export holds only
-the account's own portfolios, not the ones shared with it.
+that cannot be quoted is kept as a manually priced security and reported after the import. Prices typed by hand (a
+property's valuations, a GIC, a private fund) travel in the file with each security's kind, so a restore values them
+as before; a file exported before 1.4.2 has none and carries those holdings at cost. An import is all or nothing: a
+file refused partway leaves nothing behind. The export holds only the account's own portfolios, not the ones shared
+with it.
 
 ## Install it as an app
 

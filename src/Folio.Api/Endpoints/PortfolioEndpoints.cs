@@ -31,10 +31,8 @@ public static class PortfolioEndpoints
 
     private static async Task<List<PortfolioSummaryDto>> List(FolioDbContext db, PortfolioCalculator calculator, CancellationToken ct)
     {
-        var summaries = new List<PortfolioSummaryDto>();
-        foreach (var portfolio in await db.Portfolios.AsNoTracking().OrderBy(p => p.CreatedAt).ToListAsync(ct))
-            summaries.Add(ToSummary(await calculator.SnapshotAsync(portfolio, ct)));
-        return summaries;
+        var portfolios = await db.Portfolios.AsNoTracking().OrderBy(p => p.CreatedAt).ToListAsync(ct);
+        return (await calculator.SnapshotsAsync(portfolios, ct)).Select(ToSummary).ToList();
     }
 
     private static async Task<Results<Created<PortfolioSummaryDto>, ProblemHttpResult>> Create(

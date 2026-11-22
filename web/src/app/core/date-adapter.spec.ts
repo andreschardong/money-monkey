@@ -30,6 +30,11 @@ describe('LocalDateAdapter', () => {
     expect(adapter.parse('2024-02-29')!.getDate()).toBe(29);
   });
 
+  it('writes a date as its local calendar day, late in the evening and just after midnight alike', () => {
+    expect(adapter.toIso8601(new Date(2026, 10, 21, 23, 59))).toBe('2026-11-21');
+    expect(adapter.toIso8601(new Date(2026, 10, 21, 0, 1))).toBe('2026-11-21');
+  });
+
   it.each(['2026-02-30', '2026-13-01', '2026-00-10', '2025-02-29', '2026-04-31'])(
     'treats the impossible day %s as invalid',
     (input) => {

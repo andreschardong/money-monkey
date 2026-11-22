@@ -628,6 +628,10 @@ namespace Folio.Api.Data.Migrations
                     b.HasIndex("PortfolioId", "Date")
                         .HasDatabaseName("ix_transactions_portfolio_id_date");
 
+                    b.HasIndex("PortfolioId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_transactions_portfolio_id_sequence");
+
                     b.ToTable("transactions", (string)null);
                 });
 
